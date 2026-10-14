@@ -178,6 +178,8 @@ export default function Home() {
     const leafMat = makeMaterial("Leaves", new Color3(0.12, 0.43, 0.16));
     const leafLightMat = makeMaterial("LeavesLight", new Color3(0.19, 0.52, 0.20));
     const leafDeepMat = makeMaterial("LeavesDeep", new Color3(0.08, 0.34, 0.13));
+    const barkLightMat = makeMaterial("TreeBarkLight", new Color3(0.66, 0.42, 0.22));
+    const barkDeepMat = makeMaterial("TreeBarkGrooves", new Color3(0.30, 0.17, 0.09));
     const manaMat = makeMaterial("ManaCrystal", new Color3(0.1, 0.95, 1));
     const whiteMat = makeMaterial("White", new Color3(0.96, 0.96, 0.96));
     const blackMat = makeMaterial("Black", new Color3(0.035, 0.035, 0.035));
@@ -772,6 +774,50 @@ export default function Home() {
       trunk.material = woodMat;
       shadowGenerator.addShadowCaster(trunk);
 
+      // Fine bark lines add texture without requiring image textures.
+      // They sit on the camera-facing side of the trunk and share materials.
+      for (let groove = 0; groove < 3; groove++) {
+        const barkLine = MeshBuilder.CreateCylinder(
+          `TreeBarkLine${i}_${groove}`,
+          {
+            height: trunkHeight * (0.48 + (groove % 2) * 0.12),
+            diameterTop: 0.025,
+            diameterBottom: 0.045,
+            tessellation: 5,
+          },
+          scene
+        );
+        barkLine.position.set(
+          x + (groove - 1) * 0.15,
+          trunkHeight * (0.45 + (groove % 2) * 0.04),
+          z + 0.30
+        );
+        barkLine.rotation.z = ((groove % 2) ? -0.035 : 0.025);
+        barkLine.material = groove === 1 ? barkLightMat : barkDeepMat;
+        barkLine.isPickable = false;
+        barkLine.receiveShadows = false;
+      }
+
+      // Short root flares make each tree feel anchored in the ground.
+      for (let root = 0; root < 3; root++) {
+        const angle = (root / 3) * Math.PI * 2 + i * 0.37;
+        const rootMesh = MeshBuilder.CreateCylinder(
+          `TreeRoot${i}_${root}`,
+          { height: 0.72, diameterTop: 0.12, diameterBottom: 0.28, tessellation: 7 },
+          scene
+        );
+        rootMesh.position.set(
+          x + Math.cos(angle) * 0.29,
+          0.17,
+          z + Math.sin(angle) * 0.29
+        );
+        rootMesh.rotation.z = Math.cos(angle) * 0.72;
+        rootMesh.rotation.x = Math.sin(angle) * 0.72;
+        rootMesh.material = root % 2 === 0 ? woodMat : barkLightMat;
+        rootMesh.isPickable = false;
+        rootMesh.receiveShadows = false;
+      }
+
       // Overlapping rounded foliage lobes create a fuller canopy instead of
       // one obvious sphere. Small variations keep the tree line from repeating.
       const canopy = [
@@ -803,6 +849,26 @@ export default function Home() {
         leaves.material = lobe.mat;
         shadowGenerator.addShadowCaster(leaves);
       });
+
+      // Small sunlit leaf clusters break up the canopy silhouette and add
+      // depth, while remaining subtle enough to keep the trees readable.
+      for (let accent = 0; accent < 3; accent++) {
+        const angle = (accent / 3) * Math.PI * 2 + i * 0.73;
+        const highlight = MeshBuilder.CreateSphere(
+          `TreeLeafHighlight${i}_${accent}`,
+          { diameter: 0.56 + (accent % 2) * 0.08, segments: 9 },
+          scene
+        );
+        highlight.position.set(
+          x + Math.cos(angle) * 0.77,
+          trunkHeight + 0.76 + (accent % 2) * 0.22,
+          z + Math.sin(angle) * 0.68
+        );
+        highlight.scaling.set(1.12, 0.78, 1.02);
+        highlight.material = accent === 1 ? leafLightMat : leafMat;
+        highlight.isPickable = false;
+        highlight.receiveShadows = false;
+      }
     });
 
     // Ground-detail pass: small, low-profile decorations make the yard feel
