@@ -175,6 +175,12 @@ export default function Home() {
     const roofMat = makeMaterial("HouseRoof", new Color3(0.55, 0.19, 0.15));
     const woodMat = makeMaterial("Wood", new Color3(0.52, 0.30, 0.13));
     const blueMat = makeMaterial("Blue", new Color3(0.12, 0.42, 0.9));
+    const kidSkinMat = makeMaterial("TigerSkin", new Color3(0.93, 0.66, 0.46));
+    const kidHairMat = makeMaterial("TigerHair", new Color3(0.22, 0.105, 0.055));
+    const kidShortsMat = makeMaterial("TigerShorts", new Color3(0.16, 0.31, 0.72));
+    const kidShoeMat = makeMaterial("TigerShoes", new Color3(0.92, 0.22, 0.16));
+    const kidSoleMat = makeMaterial("TigerSoles", new Color3(0.96, 0.91, 0.78));
+    const kidMouthMat = makeMaterial("TigerSmile", new Color3(0.32, 0.12, 0.10));
     const leafMat = makeMaterial("Leaves", new Color3(0.12, 0.43, 0.16));
     const leafLightMat = makeMaterial("LeavesLight", new Color3(0.19, 0.52, 0.20));
     const leafDeepMat = makeMaterial("LeavesDeep", new Color3(0.08, 0.34, 0.13));
@@ -982,10 +988,12 @@ export default function Home() {
       pebble.receiveShadows = false;
     });
 
-    // Tiger.
+    // Tiger: a small, friendly kid adventurer with a big head, tousled hair,
+    // colorful clothes, little arms and legs, and bright expressive eyes.
+    // The main body remains the movement/collision root used by the game.
     const tiger = MeshBuilder.CreateCapsule(
       "Tiger",
-      { height: 1.5, radius: 0.45 },
+      { height: 1.08, radius: 0.34, tessellation: 16 },
       scene
     );
     tiger.position.set(0, 0.8, 1);
@@ -994,31 +1002,159 @@ export default function Home() {
 
     const tigerHead = MeshBuilder.CreateSphere(
       "TigerHead",
-      { diameter: 0.85 },
+      { diameter: 0.78, segments: 20 },
       scene
     );
     tigerHead.parent = tiger;
-    tigerHead.position.set(0, 0.75, 0);
+    tigerHead.position.set(0, 0.68, 0.035);
+    tigerHead.material = kidSkinMat;
+    shadowGenerator.addShadowCaster(tigerHead);
 
-    for (const offset of [-0.17, 0.17]) {
-      const eye = MeshBuilder.CreateSphere(
-        `TigerEye${offset}`,
-        { diameter: 0.13 },
+    // Hair cap and little swept-up tufts make the silhouette read as a kid.
+    const tigerHair = MeshBuilder.CreateSphere(
+      "TigerHairCap",
+      { diameter: 0.78, segments: 16 },
+      scene
+    );
+    tigerHair.parent = tiger;
+    tigerHair.position.set(0, 0.91, -0.015);
+    tigerHair.scaling.set(1.02, 0.48, 0.92);
+    tigerHair.material = kidHairMat;
+
+    for (const [index, tuft] of [[0, -0.16], [1, 0], [2, 0.15]] as [number, number][]) {
+      const hairTuft = MeshBuilder.CreateSphere(
+        `TigerHairTuft${index}`,
+        { diameter: 0.22, segments: 10 },
         scene
       );
-      eye.parent = tiger;
-      eye.position.set(offset, 0.82, 0.35);
-      eye.material = blackMat;
+      hairTuft.parent = tiger;
+      hairTuft.position.set(tuft, 1.055 + (index === 1 ? 0.035 : 0), 0.005);
+      hairTuft.scaling.set(0.82, 0.9, 0.75);
+      hairTuft.material = kidHairMat;
+    }
+
+    // Ears peek out from the sides of the head.
+    for (const side of [-1, 1]) {
+      const ear = MeshBuilder.CreateSphere(
+        `TigerEar${side}`,
+        { diameter: 0.19, segments: 12 },
+        scene
+      );
+      ear.parent = tiger;
+      ear.position.set(side * 0.36, 0.63, 0.015);
+      ear.material = kidSkinMat;
+
+      // Short sleeves and little hands give the player a clear child silhouette.
+      const arm = MeshBuilder.CreateCapsule(
+        `TigerArm${side}`,
+        { height: 0.56, radius: 0.105, tessellation: 10 },
+        scene
+      );
+      arm.parent = tiger;
+      arm.position.set(side * 0.34, 0.02, 0.015);
+      arm.rotation.z = side * -0.24;
+      arm.material = blueMat;
+      shadowGenerator.addShadowCaster(arm);
+
+      const hand = MeshBuilder.CreateSphere(
+        `TigerHand${side}`,
+        { diameter: 0.17, segments: 10 },
+        scene
+      );
+      hand.parent = tiger;
+      hand.position.set(side * 0.42, -0.25, 0.045);
+      hand.material = kidSkinMat;
+
+      const leg = MeshBuilder.CreateCapsule(
+        `TigerLeg${side}`,
+        { height: 0.48, radius: 0.13, tessellation: 10 },
+        scene
+      );
+      leg.parent = tiger;
+      leg.position.set(side * 0.17, -0.53, 0.015);
+      leg.material = kidShortsMat;
+      shadowGenerator.addShadowCaster(leg);
+
+      const shoe = MeshBuilder.CreateSphere(
+        `TigerShoe${side}`,
+        { diameter: 0.3, segments: 12 },
+        scene
+      );
+      shoe.parent = tiger;
+      shoe.position.set(side * 0.18, -0.73, 0.105);
+      shoe.scaling.set(1.08, 0.58, 1.35);
+      shoe.material = kidShoeMat;
+
+      const sole = MeshBuilder.CreateSphere(
+        `TigerSole${side}`,
+        { diameter: 0.29, segments: 10 },
+        scene
+      );
+      sole.parent = tiger;
+      sole.position.set(side * 0.18, -0.79, 0.11);
+      sole.scaling.set(1.08, 0.22, 1.34);
+      sole.material = kidSoleMat;
+    }
+
+    // Bright eyes with white highlights, facing the character's forward (+Z) direction.
+    for (const offset of [-0.17, 0.17]) {
+      const eyeWhite = MeshBuilder.CreateSphere(
+        `TigerEyeWhite${offset}`,
+        { diameter: 0.19, segments: 12 },
+        scene
+      );
+      eyeWhite.parent = tiger;
+      eyeWhite.position.set(offset, 0.69, 0.355);
+      eyeWhite.material = whiteMat;
+
+      const pupil = MeshBuilder.CreateSphere(
+        `TigerEye${offset}`,
+        { diameter: 0.105, segments: 12 },
+        scene
+      );
+      pupil.parent = tiger;
+      pupil.position.set(offset + 0.015, 0.69, 0.435);
+      pupil.material = blackMat;
+
+      const eyeSparkle = MeshBuilder.CreateSphere(
+        `TigerEyeSparkle${offset}`,
+        { diameter: 0.035, segments: 8 },
+        scene
+      );
+      eyeSparkle.parent = tiger;
+      eyeSparkle.position.set(offset - 0.005, 0.72, 0.477);
+      eyeSparkle.material = whiteMat;
     }
 
     const tigerNose = MeshBuilder.CreateSphere(
       "TigerNose",
-      { diameter: 0.1 },
+      { diameter: 0.085, segments: 10 },
       scene
     );
     tigerNose.parent = tiger;
-    tigerNose.position.set(0, 0.68, 0.4);
+    tigerNose.position.set(0, 0.56, 0.43);
     tigerNose.material = pinkMat;
+
+    const tigerSmile = MeshBuilder.CreateSphere(
+      "TigerSmile",
+      { diameter: 0.13, segments: 10 },
+      scene
+    );
+    tigerSmile.parent = tiger;
+    tigerSmile.position.set(0, 0.49, 0.405);
+    tigerSmile.scaling.set(1, 0.28, 0.45);
+    tigerSmile.material = kidMouthMat;
+
+    // A small sunshine-yellow backpack adds a playful adventurer detail.
+    const backpackMat = makeMaterial("TigerBackpack", new Color3(1, 0.68, 0.12));
+    const backpack = MeshBuilder.CreateBox(
+      "TigerBackpack",
+      { width: 0.38, height: 0.42, depth: 0.18 },
+      scene
+    );
+    backpack.parent = tiger;
+    backpack.position.set(0, 0.12, -0.31);
+    backpack.material = backpackMat;
 
     const camera = new ArcRotateCamera(
       "Camera",
