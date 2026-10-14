@@ -71,7 +71,7 @@ type Projectile = {
   life: number;
 };
 
-type BuildMode = "none" | "barn" | "road";
+type BuildMode = "none" | "barn" | "road" | "water";
 
 type RoadTile = {
   x: number;
@@ -83,6 +83,12 @@ type Barn = {
   x: number;
   z: number;
   rotation: number;
+  parts: Mesh[];
+};
+
+type WaterTile = {
+  x: number;
+  z: number;
   parts: Mesh[];
 };
 
@@ -98,6 +104,7 @@ export default function Home() {
   const [barnBuilt, setBarnBuilt] = useState(false);
   const [barnCount, setBarnCount] = useState(0);
   const [roadCount, setRoadCount] = useState(0);
+  const [waterCount, setWaterCount] = useState(0);
   const [mode, setModeUI] = useState<BuildMode>("none");
   const [invertedMovement, setInvertedMovement] = useState(false);
   const invertedMovementRef = useRef(false);
@@ -186,6 +193,14 @@ export default function Home() {
     const ghostMat = makeMaterial("BuildingPreview", new Color3(0.2, 0.9, 1), 0.38);
     const roadMat = makeMaterial("RoadSurface", new Color3(0.34, 0.36, 0.4));
     const roadLineMat = makeMaterial("RoadMarkings", new Color3(0.95, 0.85, 0.45));
+    const roadEdgeMat = makeMaterial("RoadCurb", new Color3(0.57, 0.59, 0.61));
+    const waterMat = makeMaterial("WaterBlock", new Color3(0.08, 0.62, 0.92), 0.78);
+    waterMat.emissiveColor = new Color3(0.02, 0.16, 0.22);
+    waterMat.specularColor = new Color3(0.75, 0.9, 1);
+    waterMat.specularPower = 64;
+    const waterRippleMat = makeMaterial("WaterRipple", new Color3(0.55, 0.94, 1), 0.82);
+    const hayMat = makeMaterial("BarnHay", new Color3(0.88, 0.66, 0.25));
+    const bowlMat = makeMaterial("CatBowl", new Color3(0.12, 0.65, 0.82));
     const slimeMat = makeMaterial("SlimeGreen", new Color3(0.2, 0.9, 0.35));
     const slimeEyeMat = makeMaterial("SlimeEyes", new Color3(0.04, 0.08, 0.05));
     const magicMat = makeMaterial("MagicProjectile", new Color3(0.25, 0.45, 1));
@@ -494,6 +509,85 @@ export default function Home() {
     ground.material = grassMat;
     ground.isPickable = false;
     ground.receiveShadows = true;
+
+    // A cheerful sun and soft, drifting clouds bring the yard to life.
+    // These are decorative sky meshes: they never block movement or picking.
+    const sunMat = makeMaterial("SunnyGold", new Color3(1, 0.78, 0.2));
+    sunMat.emissiveColor = new Color3(1, 0.58, 0.08);
+    sunMat.disableLighting = true;
+    const sunHaloMat = makeMaterial("SunHalo", new Color3(1, 0.86, 0.42), 0.2);
+    sunHaloMat.emissiveColor = new Color3(1, 0.72, 0.25);
+    sunHaloMat.disableLighting = true;
+
+    const sunHalo = MeshBuilder.CreateSphere(
+      "SunSoftHalo",
+      { diameter: 6.2, segments: 20 },
+      scene
+    );
+    sunHalo.position.set(0, 24, -30);
+    sunHalo.material = sunHaloMat;
+    sunHalo.isPickable = false;
+    sunHalo.receiveShadows = false;
+
+    const sun = MeshBuilder.CreateSphere(
+      "SunnySun",
+      { diameter: 4.2, segments: 24 },
+      scene
+    );
+    sun.position.copyFrom(sunHalo.position);
+    sun.material = sunMat;
+    sun.isPickable = false;
+    sun.receiveShadows = false;
+
+    const cloudMat = makeMaterial("CloudWhite", new Color3(0.98, 0.99, 1));
+    cloudMat.emissiveColor = new Color3(0.38, 0.4, 0.42);
+    cloudMat.disableLighting = true;
+    const cloudShadeMat = makeMaterial("CloudSoftShade", new Color3(0.78, 0.87, 0.96));
+    cloudShadeMat.disableLighting = true;
+
+    const skyClouds: {
+      parts: Mesh[];
+      basePositions: Vector3[];
+      phase: number;
+      drift: number;
+    }[] = [];
+
+    const makeCloud = (name: string, x: number, y: number, z: number, scale: number, phase: number, drift: number) => {
+      const parts: Mesh[] = [];
+      const offsets = [
+        [-1.25, 0, 0, 1.65, 0.72, 0.82],
+        [-0.35, 0.34, 0.08, 1.75, 1.05, 1.05],
+        [0.72, 0.18, -0.03, 1.85, 0.9, 1.0],
+        [1.45, -0.03, 0.04, 1.35, 0.66, 0.78],
+      ];
+      offsets.forEach(([ox, oy, oz, sx, sy, sz], index) => {
+        const puff = MeshBuilder.CreateSphere(
+          `${name}Puff${index}`,
+          { diameter: 1, segments: 12 },
+          scene
+        );
+        puff.position.set(x + ox * scale, y + oy * scale, z + oz * scale);
+        puff.scaling.set(sx * scale, sy * scale, sz * scale);
+        puff.material = index === 0 ? cloudShadeMat : cloudMat;
+        puff.isPickable = false;
+        puff.receiveShadows = false;
+        parts.push(puff);
+      });
+      skyClouds.push({
+        parts,
+        basePositions: parts.map((part) => part.position.clone()),
+        phase,
+        drift,
+      });
+    };
+
+    // Spread clouds around the play area so they're visible as the camera rotates.
+    makeCloud("CloudNorthWest", -25, 16, -27, 1.25, 0.3, 1.0);
+    makeCloud("CloudNorthEast", 22, 19, -29, 1.05, 1.7, -0.8);
+    makeCloud("CloudWest", -32, 14, -2, 0.9, 2.4, 0.7);
+    makeCloud("CloudEast", 32, 17, 5, 1.15, 3.1, -0.65);
+    makeCloud("CloudSouthWest", -24, 18, 27, 1.0, 4.2, 0.8);
+    makeCloud("CloudSouthEast", 25, 15, 29, 1.2, 5.1, -0.7);
 
     // Home: layered foundation, gable roof, framed windows, and a paneled door.
     // Keep these as separate meshes so the existing scene and gameplay remain intact.
@@ -1154,10 +1248,14 @@ export default function Home() {
 
     const keys = new Set<string>();
     const roadTiles: RoadTile[] = [];
+    const waterTiles: WaterTile[] = [];
     const barns: Barn[] = [];
     let roadPreview: Mesh[] = [];
+    let waterPreview: Mesh[] = [];
     let roadX = 0;
     let roadZ = 0;
+    let waterX = 0;
+    let waterZ = 0;
     let roadRotation = 0;
 
     const setMode = (nextMode: BuildMode) => {
@@ -1262,8 +1360,39 @@ export default function Home() {
         roofWoodMat
       );
       placeParts(parts, x, z, rotation);
-      parts.forEach((part) => shadowGenerator.addShadowCaster(part));
 
+      // Six warm straw pads make each rescued cat's spot easy to see through the open front.
+      const catSlots = [
+        [-0.85, -0.62], [0, -0.62], [0.85, -0.62],
+        [-0.85, 0.45], [0, 0.45], [0.85, 0.45],
+      ];
+      const radians = (rotation * Math.PI) / 180;
+      catSlots.forEach(([localX, localZ], slotIndex) => {
+        const worldX = x + localX * Math.cos(radians) - localZ * Math.sin(radians);
+        const worldZ = z + localX * Math.sin(radians) + localZ * Math.cos(radians);
+        const bed = MeshBuilder.CreateCylinder(
+          `Barn${index}CatBed${slotIndex}`,
+          { height: 0.07, diameter: 0.82, tessellation: 24 },
+          scene
+        );
+        bed.position.set(worldX, 0.26, worldZ);
+        bed.rotation.y = radians;
+        bed.material = hayMat;
+        bed.isPickable = false;
+        parts.push(bed);
+
+        const bowl = MeshBuilder.CreateCylinder(
+          `Barn${index}WaterBowl${slotIndex}`,
+          { height: 0.09, diameter: 0.24, tessellation: 20 },
+          scene
+        );
+        bowl.position.set(worldX + Math.cos(radians) * 0.28, 0.31, worldZ + Math.sin(radians) * 0.28);
+        bowl.material = bowlMat;
+        bowl.isPickable = false;
+        parts.push(bowl);
+      });
+
+      parts.forEach((part) => shadowGenerator.addShadowCaster(part));
       return { x, z, rotation, parts };
     };
 
@@ -1296,7 +1425,24 @@ export default function Home() {
       dash.material = preview ? ghostMat : roadLineMat;
       dash.isPickable = false;
 
-      return [tile, dash];
+      const curbs = [-1, 1].map((side) => {
+        const curb = MeshBuilder.CreateBox(
+          `${prefix}Curb${side}`,
+          { width: 0.12, height: 0.12, depth: 2 },
+          scene
+        );
+        curb.position.set(
+          x + side * 0.93 * Math.cos(radians),
+          0.065,
+          z - side * 0.93 * Math.sin(radians)
+        );
+        curb.rotation.y = radians;
+        curb.material = preview ? ghostMat : roadEdgeMat;
+        curb.isPickable = false;
+        return curb;
+      });
+
+      return [tile, dash, ...curbs];
     };
 
     const clearRoadPreview = () => {
@@ -1319,6 +1465,61 @@ export default function Home() {
         roadPreview[0].rotation.y = radians;
         roadPreview[1].position.set(roadX, 0.1, roadZ);
         roadPreview[1].rotation.y = radians;
+        roadPreview[2].position.set(
+          roadX - 0.93 * Math.cos(radians), 0.065,
+          roadZ + 0.93 * Math.sin(radians)
+        );
+        roadPreview[3].position.set(
+          roadX + 0.93 * Math.cos(radians), 0.065,
+          roadZ - 0.93 * Math.sin(radians)
+        );
+        roadPreview[2].rotation.y = radians;
+        roadPreview[3].rotation.y = radians;
+      }
+    };
+
+
+    const clearWaterPreview = () => {
+      waterPreview.forEach((part) => part.dispose());
+      waterPreview = [];
+    };
+
+    const createWaterTile = (x: number, z: number, prefix: string, preview = false) => {
+      const parts: Mesh[] = [];
+      const surface = MeshBuilder.CreateBox(
+        `${prefix}Surface`,
+        { width: 1.92, height: 0.09, depth: 1.92 },
+        scene
+      );
+      surface.position.set(x, 0.11, z);
+      surface.material = preview ? ghostMat : waterMat;
+      surface.isPickable = false;
+      parts.push(surface);
+
+      // Three bright, inset ripple lines make a water block read as water at a glance.
+      for (let i = 0; i < 3; i++) {
+        const ripple = MeshBuilder.CreateBox(
+          `${prefix}Ripple${i}`,
+          { width: 0.9 - i * 0.18, height: 0.018, depth: 0.055 },
+          scene
+        );
+        ripple.position.set(x, 0.165 + i * 0.003, z + (i - 1) * 0.38);
+        ripple.material = preview ? ghostMat : waterRippleMat;
+        ripple.isPickable = false;
+        parts.push(ripple);
+      }
+      return parts;
+    };
+
+    const updateWaterPreview = () => {
+      if (waterPreview.length === 0) {
+        waterPreview = createWaterTile(waterX, waterZ, "WaterPreview", true);
+      } else {
+        waterPreview[0].position.set(waterX, 0.11, waterZ);
+        for (let i = 1; i < waterPreview.length; i++) {
+          waterPreview[i].position.x = waterX;
+          waterPreview[i].position.z = waterZ + (i - 2) * 0.38;
+        }
       }
     };
 
@@ -1453,6 +1654,7 @@ export default function Home() {
           setMode("none");
           ghostParts.forEach((part) => part.setEnabled(false));
           clearRoadPreview();
+          clearWaterPreview();
           setMessage("Placement cancelled. Keep exploring!");
           return;
         }
@@ -1603,6 +1805,49 @@ export default function Home() {
           roadX = Math.max(-37, Math.min(37, roadX));
           roadZ = Math.max(-37, Math.min(37, roadZ));
           updateRoadPreview();
+          return;
+        }
+
+        if (buildMode === "water") {
+          if (key === "y") {
+            setMode("none");
+            clearWaterPreview();
+            setMessage("Water-block placement cancelled.");
+            return;
+          }
+          if (key === "arrowup" || key === "w") waterZ -= 2;
+          else if (key === "arrowdown" || key === "s") waterZ += 2;
+          else if (key === "arrowleft" || key === "a") waterX -= 2;
+          else if (key === "arrowright" || key === "d") waterX += 2;
+          else if (key === "enter") {
+            if (manaCount < 1 || stoneCount < 2) {
+              setMessage(`Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`);
+              return;
+            }
+            const occupied = waterTiles.some((tile) => Math.abs(tile.x - waterX) < 1.5 && Math.abs(tile.z - waterZ) < 1.5)
+              || roadTiles.some((tile) => Math.abs(tile.x - waterX) < 1.2 && Math.abs(tile.z - waterZ) < 1.2);
+            if (occupied) {
+              setMessage("That spot is occupied. Place water beside the road or another water block.");
+              return;
+            }
+            const parts = createWaterTile(waterX, waterZ, `WaterBlock${waterTiles.length}`, false);
+            parts.forEach((part) => shadowGenerator.addShadowCaster(part));
+            waterTiles.push({ x: waterX, z: waterZ, parts });
+            manaCount -= 1;
+            stoneCount -= 2;
+            setMana(manaCount);
+            setStone(stoneCount);
+            setWaterCount(waterTiles.length);
+            setMessage(`Water block placed! ${waterTiles.length} water block(s) built.`);
+            waterX = Math.min(37, waterX + 2);
+            updateWaterPreview();
+            return;
+          } else {
+            return;
+          }
+          waterX = Math.max(-37, Math.min(37, waterX));
+          waterZ = Math.max(-37, Math.min(37, waterZ));
+          updateWaterPreview();
           return;
         }
       }
@@ -1785,6 +2030,18 @@ export default function Home() {
         setMode("road");
         updateRoadPreview();
         setMessage("Place a road tile: move with WASD, rotate with Q/R, Enter places.");
+      }
+
+      if (key === "y") {
+        if (manaCount < 1 || stoneCount < 2) {
+          setMessage(`Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`);
+          return;
+        }
+        waterX = Math.round(tiger.position.x + 2);
+        waterZ = Math.round(tiger.position.z);
+        setMode("water");
+        updateWaterPreview();
+        setMessage("Place water blocks: move with WASD, Enter places a block, Y cancels.");
       }
     };
 
@@ -2142,6 +2399,25 @@ export default function Home() {
         );
       }
 
+      // Clouds drift slowly and bob just a little, keeping the sky lively but calm.
+      skyClouds.forEach((cloud) => {
+        cloud.parts.forEach((part, index) => {
+          const base = cloud.basePositions[index];
+          part.position.x = base.x + Math.sin(now * 0.00012 * cloud.drift + cloud.phase) * 1.8;
+          part.position.y = base.y + Math.sin(now * 0.00055 + cloud.phase) * 0.16;
+        });
+      });
+      const haloScale = 1 + Math.sin(now * 0.0011) * 0.025;
+      sunHalo.scaling.set(haloScale, haloScale, haloScale);
+
+      // Gentle shimmer keeps placed water blocks feeling alive without heavy effects.
+      waterTiles.forEach((tile, index) => {
+        tile.parts.slice(1).forEach((ripple, rippleIndex) => {
+          ripple.position.x = tile.x + Math.sin(now * 0.0018 + index + rippleIndex) * 0.12;
+          ripple.scaling.x = 0.85 + Math.sin(now * 0.002 + rippleIndex) * 0.12;
+        });
+      });
+
       scene.render();
     });
 
@@ -2243,6 +2519,11 @@ export default function Home() {
             <div className="text-xs text-slate-300">Road tiles</div>
             <div className="text-lg font-bold">{roadCount} 🛣️</div>
           </div>
+
+          <div className="rounded-xl bg-white/10 px-3 py-2">
+            <div className="text-xs text-slate-300">Water blocks</div>
+            <div className="text-lg font-bold">{waterCount} 💧</div>
+          </div>
         </div>
 
         <div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
@@ -2263,7 +2544,9 @@ export default function Home() {
               ? "Place a barn"
               : mode === "road"
                 ? "Build a road tile"
-                : "Explore and defend the yard"}
+                : mode === "water"
+                  ? "Place a water block"
+                  : "Explore and defend the yard"}
           </div>
         </div>
 
@@ -2319,7 +2602,15 @@ export default function Home() {
       </div>
 
       <div className="pointer-events-none absolute bottom-4 right-4 left-auto max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-xs text-white shadow-xl sm:bottom-6 sm:right-6 sm:max-h-[55vh] sm:p-4 sm:text-sm">
-    {mode === "road" ? (
+    {mode === "water" ? (
+      <>
+        <p className="mb-2 font-bold text-cyan-300">WATER-BLOCK MODE</p>
+        <p>Recipe: 1 mana + 2 stone per block</p>
+        <p>WASD / Arrows — Move water preview</p>
+        <p>Enter — Place block</p>
+        <p>Y / Escape — Exit</p>
+      </>
+    ) : mode === "road" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">ROAD-BUILDING MODE</p>
         <p>Recipe: 1 wood + 2 stone per tile</p>
@@ -2349,6 +2640,7 @@ export default function Home() {
         <p>❤️ Collect floating bonus hearts to heal up to 13 health</p>
         <p>B — Build another barn (5 wood + 3 stone)</p>
         <p>T — Place road tiles (1 wood + 2 stone each)</p>
+        <p>Y — Place water blocks (1 mana + 2 stone each)</p>
         <p>Mouse drag / scroll — Rotate camera / zoom</p>
       </>
     )}
