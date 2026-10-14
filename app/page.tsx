@@ -490,55 +490,155 @@ export default function Home() {
     ground.isPickable = false;
     ground.receiveShadows = true;
 
-    // Home.
+    // Home: layered foundation, gable roof, framed windows, and a paneled door.
+    // Keep these as separate meshes so the existing scene and gameplay remain intact.
+    const houseFoundation = MeshBuilder.CreateBox(
+      "HouseFoundation",
+      { width: 6.35, height: 0.48, depth: 5.3 },
+      scene
+    );
+    houseFoundation.position.set(0, 0.24, 8);
+    houseFoundation.material = stoneMat;
+    shadowGenerator.addShadowCaster(houseFoundation);
+    houseFoundation.receiveShadows = true;
+
     const house = MeshBuilder.CreateBox(
       "House",
       { width: 6, height: 4, depth: 5 },
       scene
     );
-    house.position.set(0, 2, 8);
+    house.position.set(0, 2.22, 8);
     house.material = wallMat;
     shadowGenerator.addShadowCaster(house);
+    house.receiveShadows = true;
 
-    const houseRoof = MeshBuilder.CreateCylinder(
-      "HouseRoof",
-      {
-        diameterTop: 0,
-        diameterBottom: 8,
-        height: 3.5,
-        tessellation: 20,
-      },
+    // A two-sided pitched roof replaces the pointed cone. The sloped panels
+    // create a familiar cottage silhouette and keep the terracotta texture.
+    const roofLeft = MeshBuilder.CreateBox(
+      "HouseRoofLeft",
+      { width: 3.75, height: 0.28, depth: 5.7 },
       scene
     );
-    houseRoof.position.set(0, 5.1, 8);
-    houseRoof.rotation.y = Math.PI / 4;
-    houseRoof.material = roofMat;
-    shadowGenerator.addShadowCaster(houseRoof);
+    roofLeft.position.set(-1.45, 4.83, 8);
+    roofLeft.rotation.z = 0.43;
+    roofLeft.material = roofMat;
+    shadowGenerator.addShadowCaster(roofLeft);
+
+    const roofRight = MeshBuilder.CreateBox(
+      "HouseRoofRight",
+      { width: 3.75, height: 0.28, depth: 5.7 },
+      scene
+    );
+    roofRight.position.set(1.45, 4.83, 8);
+    roofRight.rotation.z = -0.43;
+    roofRight.material = roofMat;
+    shadowGenerator.addShadowCaster(roofRight);
+
+    // Ridge cap softens the join between roof slopes.
+    const roofRidge = MeshBuilder.CreateCylinder(
+      "HouseRoofRidge",
+      { height: 5.85, diameter: 0.24, tessellation: 12 },
+      scene
+    );
+    roofRidge.rotation.x = Math.PI / 2;
+    roofRidge.position.set(0, 5.58, 8);
+    roofRidge.material = roofMat;
+    shadowGenerator.addShadowCaster(roofRidge);
+
+    // Front and rear fascia boards add depth to the roof edge.
+    for (const z of [5.08, 10.92]) {
+      for (const side of [-1, 1]) {
+        const fascia = MeshBuilder.CreateBox(
+          `HouseRoofFascia${z}_${side}`,
+          { width: 3.8, height: 0.18, depth: 0.12 },
+          scene
+        );
+        fascia.position.set(side * 1.43, 4.82, z);
+        fascia.rotation.z = side === -1 ? 0.43 : -0.43;
+        fascia.material = woodMat;
+        shadowGenerator.addShadowCaster(fascia);
+      }
+    }
+
+    // Door casing, inset panel, and handle.
+    const doorFrame = MeshBuilder.CreateBox(
+      "FrontDoorFrame",
+      { width: 1.48, height: 2.42, depth: 0.18 },
+      scene
+    );
+    doorFrame.position.set(0, 1.25, 5.43);
+    doorFrame.material = woodMat;
 
     const door = MeshBuilder.CreateBox(
       "FrontDoor",
-      { width: 1.2, height: 2.2, depth: 0.15 },
+      { width: 1.16, height: 2.14, depth: 0.12 },
       scene
     );
-    door.position.set(0, 1.1, 5.42);
+    door.position.set(0, 1.17, 5.54);
     door.material = woodMat;
+
+    const doorPanel = MeshBuilder.CreateBox(
+      "FrontDoorPanel",
+      { width: 0.72, height: 1.08, depth: 0.035 },
+      scene
+    );
+    doorPanel.position.set(0, 1.38, 5.615);
+    doorPanel.material = roofWoodMat;
 
     const doorKnob = MeshBuilder.CreateSphere(
       "DoorKnob",
-      { diameter: 0.12 },
+      { diameter: 0.13, segments: 12 },
       scene
     );
-    doorKnob.position.set(0.4, 1.1, 5.3);
+    doorKnob.position.set(0.39, 1.12, 5.64);
     doorKnob.material = manaMat;
 
+    // Window frames sit proud of the plaster; glass panes and crossbars add
+    // depth without relying on shiny materials.
     for (const x of [-1.9, 1.9]) {
-      const windowMesh = MeshBuilder.CreateBox(
-        `HouseWindow${x}`,
-        { width: 1, height: 1, depth: 0.12 },
+      const windowFrame = MeshBuilder.CreateBox(
+        `HouseWindowFrame${x}`,
+        { width: 1.28, height: 1.28, depth: 0.18 },
         scene
       );
-      windowMesh.position.set(x, 2.6, 5.42);
+      windowFrame.position.set(x, 2.65, 5.43);
+      windowFrame.material = woodMat;
+
+      const windowMesh = MeshBuilder.CreateBox(
+        `HouseWindow${x}`,
+        { width: 1.02, height: 1.02, depth: 0.08 },
+        scene
+      );
+      windowMesh.position.set(x, 2.65, 5.55);
       windowMesh.material = blueMat;
+
+      const verticalBar = MeshBuilder.CreateBox(
+        `HouseWindowVerticalBar${x}`,
+        { width: 0.07, height: 1.04, depth: 0.07 },
+        scene
+      );
+      verticalBar.position.set(x, 2.65, 5.61);
+      verticalBar.material = whiteMat;
+
+      const horizontalBar = MeshBuilder.CreateBox(
+        `HouseWindowHorizontalBar${x}`,
+        { width: 1.04, height: 0.07, depth: 0.07 },
+        scene
+      );
+      horizontalBar.position.set(x, 2.65, 5.61);
+      horizontalBar.material = whiteMat;
+    }
+
+    // Small stone corner blocks help visually connect the walls to the base.
+    for (const x of [-2.85, 2.85]) {
+      const cornerStone = MeshBuilder.CreateBox(
+        `HouseCornerStone${x}`,
+        { width: 0.28, height: 3.85, depth: 0.28 },
+        scene
+      );
+      cornerStone.position.set(x, 2.15, 5.42);
+      cornerStone.material = stoneMat;
+      shadowGenerator.addShadowCaster(cornerStone);
     }
 
     // Expanded tree locations.
