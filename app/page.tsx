@@ -184,7 +184,7 @@ export default function Home() {
     // PROCEDURAL WORLD TEXTURES: drawn in code, so no image downloads are needed.
     const makePatternTexture = (
       name: string,
-      drawPattern: (ctx: CanvasRenderingContext2D, size: number) => void,
+      drawPattern: (ctx: ReturnType<DynamicTexture["getContext"]>, size: number) => void,
       repeatsU = 1,
       repeatsV = 1
     ) => {
@@ -223,8 +223,20 @@ export default function Home() {
         }
         for (let i = 0; i < 90; i++) {
           ctx.fillStyle = i % 2 ? "rgba(35,105,39,0.12)" : "rgba(190,218,100,0.12)";
+          const cx = Math.random() * size;
+          const cy = Math.random() * size;
+          const rx = 5 + Math.random() * 15;
+          const ry = 3 + Math.random() * 9;
+          const angle = Math.random() * Math.PI;
           ctx.beginPath();
-          ctx.ellipse(Math.random() * size, Math.random() * size, 5 + Math.random() * 15, 3 + Math.random() * 9, Math.random(), 0, Math.PI * 2);
+          for (let point = 0; point <= 12; point++) {
+            const a = (point / 12) * Math.PI * 2;
+            const px = cx + Math.cos(a) * rx * Math.cos(angle) - Math.sin(a) * ry * Math.sin(angle);
+            const py = cy + Math.cos(a) * rx * Math.sin(angle) + Math.sin(a) * ry * Math.cos(angle);
+            if (point === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
           ctx.fill();
         }
       },
@@ -260,12 +272,11 @@ export default function Home() {
             const x = col * tileW + offset;
             const y = row * tileH;
             ctx.fillStyle = ["#a84432", "#b94e37", "#963729", "#c05a3c"][Math.floor(Math.random() * 4)];
-            ctx.beginPath();
-            ctx.roundRect(x + 2, y + 2, tileW - 4, tileH - 3, 5);
-            ctx.fill();
+            // Rectangular tile edges keep this compatible with Babylon's canvas context.
+            ctx.fillRect(x + 2, y + 2, tileW - 4, tileH - 3);
             ctx.strokeStyle = "rgba(70,24,20,0.45)";
             ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.strokeRect(x + 2, y + 2, tileW - 4, tileH - 3);
             ctx.strokeStyle = "rgba(255,190,130,0.22)";
             ctx.beginPath();
             ctx.moveTo(x + 8, y + 6);
@@ -299,7 +310,9 @@ export default function Home() {
             ctx.lineWidth = 1 + Math.random() * 2;
             ctx.beginPath();
             ctx.moveTo(x + 8, y);
-            ctx.bezierCurveTo(x + 20, y - 4, x + 35, y + 4, x + plankW - 8, y - 1);
+            ctx.lineTo(x + 20, y - 2);
+            ctx.lineTo(x + 35, y + 2);
+            ctx.lineTo(x + plankW - 8, y - 1);
             ctx.stroke();
           }
         }
@@ -351,8 +364,16 @@ export default function Home() {
           const rx = 3 + Math.random() * 20;
           const ry = 2 + Math.random() * 13;
           ctx.fillStyle = mineralColors[Math.floor(Math.random() * mineralColors.length)];
+          const angle = Math.random() * Math.PI;
           ctx.beginPath();
-          ctx.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+          for (let point = 0; point <= 12; point++) {
+            const a = (point / 12) * Math.PI * 2;
+            const px = x + Math.cos(a) * rx * Math.cos(angle) - Math.sin(a) * ry * Math.sin(angle);
+            const py = y + Math.cos(a) * rx * Math.sin(angle) + Math.sin(a) * ry * Math.cos(angle);
+            if (point === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
           ctx.fill();
         }
 
