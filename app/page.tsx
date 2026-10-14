@@ -805,6 +805,117 @@ export default function Home() {
       });
     });
 
+    // Ground-detail pass: small, low-profile decorations make the yard feel
+    // hand-crafted without obstructing movement, cat routes, or construction.
+    // These use shared materials and remain non-pickable for performance.
+    const grassBladeMat = makeMaterial("GroundGrassBlades", new Color3(0.22, 0.48, 0.16));
+    const grassBladeLightMat = makeMaterial("GroundGrassBladesLight", new Color3(0.39, 0.67, 0.25));
+    const flowerWhiteMat = makeMaterial("WildflowerCream", new Color3(1, 0.94, 0.72));
+    const flowerPinkMat = makeMaterial("WildflowerPink", new Color3(1, 0.42, 0.64));
+    const flowerYellowMat = makeMaterial("WildflowerYellow", new Color3(1, 0.76, 0.18));
+    const flowerCenterMat = makeMaterial("WildflowerCenter", new Color3(0.72, 0.34, 0.08));
+    const pebbleMat = makeMaterial("SmallPebbles", new Color3(0.58, 0.57, 0.49));
+    const pebbleLightMat = makeMaterial("SmallPebblesLight", new Color3(0.72, 0.69, 0.58));
+
+    const grassTuftPositions: [number, number][] = [
+      [-7, -17], [8, -20], [-18, -7], [17, -3], [-24, 9], [24, 18],
+      [-32, 13], [32, 21], [-34, -31], [23, -34], [4, 30], [-18, 27],
+      [31, -17], [-25, -31], [14, 25], [-7, 37],
+    ];
+
+    grassTuftPositions.forEach(([x, z], i) => {
+      // Three short, angled blades create a tiny tuft rather than a tall obstacle.
+      for (let blade = 0; blade < 3; blade++) {
+        const angle = (blade / 3) * Math.PI + (i % 2) * 0.3;
+        const mesh = MeshBuilder.CreateBox(
+          `GroundGrassTuft${i}_${blade}`,
+          { width: 0.075, height: 0.24 + ((i + blade) % 3) * 0.035, depth: 0.035 },
+          scene
+        );
+        mesh.position.set(
+          x + Math.cos(angle) * 0.12,
+          0.1 + ((i + blade) % 2) * 0.015,
+          z + Math.sin(angle) * 0.12
+        );
+        mesh.rotation.set(0.12, angle, Math.cos(i + blade) * 0.22);
+        mesh.material = (i + blade) % 3 === 0 ? grassBladeLightMat : grassBladeMat;
+        mesh.isPickable = false;
+        mesh.receiveShadows = false;
+      }
+    });
+
+    const flowerClusters: { x: number; z: number; color: StandardMaterial }[] = [
+      { x: -9, z: -19, color: flowerYellowMat },
+      { x: 12, z: -22, color: flowerWhiteMat },
+      { x: -21, z: -3, color: flowerPinkMat },
+      { x: 20, z: 7, color: flowerYellowMat },
+      { x: -29, z: 15, color: flowerWhiteMat },
+      { x: 28, z: 23, color: flowerPinkMat },
+      { x: -31, z: -34, color: flowerYellowMat },
+      { x: 20, z: -31, color: flowerWhiteMat },
+      { x: 7, z: 34, color: flowerPinkMat },
+      { x: -20, z: 31, color: flowerYellowMat },
+    ];
+
+    flowerClusters.forEach(({ x, z, color }, i) => {
+      for (let bloom = 0; bloom < 3; bloom++) {
+        const angle = (bloom / 3) * Math.PI * 2 + i * 0.61;
+        const fx = x + Math.cos(angle) * (0.16 + bloom * 0.035);
+        const fz = z + Math.sin(angle) * (0.16 + bloom * 0.035);
+        const stem = MeshBuilder.CreateCylinder(
+          `WildflowerStem${i}_${bloom}`,
+          { height: 0.2 + bloom * 0.025, diameter: 0.025, tessellation: 5 },
+          scene
+        );
+        stem.position.set(fx, 0.1 + bloom * 0.012, fz);
+        stem.material = grassBladeMat;
+        stem.isPickable = false;
+        stem.receiveShadows = false;
+
+        const head = MeshBuilder.CreateSphere(
+          `WildflowerBloom${i}_${bloom}`,
+          { diameter: 0.13, segments: 7 },
+          scene
+        );
+        head.position.set(fx, 0.23 + bloom * 0.025, fz);
+        head.scaling.y = 0.62;
+        head.material = color;
+        head.isPickable = false;
+        head.receiveShadows = false;
+
+        const center = MeshBuilder.CreateSphere(
+          `WildflowerHeart${i}_${bloom}`,
+          { diameter: 0.045, segments: 6 },
+          scene
+        );
+        center.position.set(fx, 0.245 + bloom * 0.025, fz);
+        center.material = flowerCenterMat;
+        center.isPickable = false;
+        center.receiveShadows = false;
+      }
+    });
+
+    const pebblePositions: [number, number, number][] = [
+      [-14, -15, 0.22], [15, -17, 0.18], [-26, -6, 0.2], [27, 10, 0.24],
+      [-35, 7, 0.18], [35, 28, 0.23], [-30, -25, 0.2], [18, -37, 0.22],
+      [1, 37, 0.18], [-23, 24, 0.23], [29, -23, 0.19], [-5, -30, 0.2],
+      [35, -4, 0.22], [-36, -15, 0.18],
+    ];
+
+    pebblePositions.forEach(([x, z, size], i) => {
+      const pebble = MeshBuilder.CreateSphere(
+        `YardPebble${i}`,
+        { diameter: 1, segments: 7 },
+        scene
+      );
+      pebble.position.set(x, size * 0.34, z);
+      pebble.scaling.set(size * 1.35, size * 0.55, size);
+      pebble.rotation.y = i * 0.73;
+      pebble.material = i % 3 === 0 ? pebbleLightMat : pebbleMat;
+      pebble.isPickable = false;
+      pebble.receiveShadows = false;
+    });
+
     // Tiger.
     const tiger = MeshBuilder.CreateCapsule(
       "Tiger",
