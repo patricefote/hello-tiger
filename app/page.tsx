@@ -159,6 +159,10 @@ export default function Home() {
     const pinkMat = makeMaterial("Pink", new Color3(1, 0.35, 0.55));
     const orangeMat = makeMaterial("Orange", new Color3(1, 0.35, 0.06));
     const grayMat = makeMaterial("Gray", new Color3(0.38, 0.4, 0.46));
+    // Dedicated stone material so Shadow the cat keeps its original gray color.
+    const stoneMat = makeMaterial("NaturalStone", Color3.White());
+    stoneMat.specularColor = new Color3(0.12, 0.12, 0.12);
+    stoneMat.specularPower = 12;
     const barnRedMat = makeMaterial("BarnRed", new Color3(0.75, 0.12, 0.12));
     const roofWoodMat = makeMaterial("BarnRoof", new Color3(0.32, 0.17, 0.12));
     const ghostMat = makeMaterial("BuildingPreview", new Color3(0.2, 0.9, 1), 0.38);
@@ -327,6 +331,67 @@ export default function Home() {
       2
     );
 
+    const stoneTexture = makePatternTexture(
+      "NaturalStoneTexture",
+      (ctx, size) => {
+        // A warm gray mineral base with mottling, grain, and fine natural cracks.
+        ctx.fillStyle = "#77766e";
+        ctx.fillRect(0, 0, size, size);
+
+        const mineralColors = [
+          "rgba(205,198,180,0.18)",
+          "rgba(45,46,45,0.16)",
+          "rgba(153,145,127,0.22)",
+          "rgba(230,224,207,0.10)",
+          "rgba(93,101,101,0.18)",
+        ];
+        for (let i = 0; i < 260; i++) {
+          const x = Math.random() * size;
+          const y = Math.random() * size;
+          const rx = 3 + Math.random() * 20;
+          const ry = 2 + Math.random() * 13;
+          ctx.fillStyle = mineralColors[Math.floor(Math.random() * mineralColors.length)];
+          ctx.beginPath();
+          ctx.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        for (let i = 0; i < 5200; i++) {
+          const shade = Math.random();
+          ctx.fillStyle = shade > 0.55
+            ? `rgba(225,220,205,${0.08 + Math.random() * 0.2})`
+            : `rgba(28,31,31,${0.06 + Math.random() * 0.18})`;
+          const dot = 0.5 + Math.random() * 2.2;
+          ctx.fillRect(Math.random() * size, Math.random() * size, dot, dot);
+        }
+
+        // Fine, broken seams add a subtle weathered-rock character.
+        for (let i = 0; i < 24; i++) {
+          let x = Math.random() * size;
+          let y = Math.random() * size;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.strokeStyle = "rgba(39,41,39,0.28)";
+          ctx.lineWidth = 0.7 + Math.random() * 1.1;
+          const steps = 3 + Math.floor(Math.random() * 5);
+          for (let step = 0; step < steps; step++) {
+            x += (Math.random() - 0.5) * 20;
+            y += 3 + Math.random() * 12;
+            ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x - 2, y);
+          ctx.lineTo(x + 3 + Math.random() * 7, y + 4 + Math.random() * 7);
+          ctx.strokeStyle = "rgba(220,214,198,0.2)";
+          ctx.lineWidth = 0.6;
+          ctx.stroke();
+        }
+      },
+      1,
+      1
+    );
+
     const asphaltTexture = makePatternTexture(
       "RoadAsphaltTexture",
       (ctx, size) => {
@@ -357,6 +422,8 @@ export default function Home() {
     roofWoodMat.diffuseColor = new Color3(0.62, 0.62, 0.62);
     roadMat.diffuseTexture = asphaltTexture;
     roadMat.diffuseColor = Color3.White();
+    stoneMat.diffuseTexture = stoneTexture;
+    stoneMat.diffuseColor = Color3.White();
 
     // Lighting and shadows.
     const hemiLight = new HemisphericLight(
@@ -728,23 +795,39 @@ export default function Home() {
       z: number,
       index: number
     ) => {
-      const mesh =
-        type === "wood"
-          ? MeshBuilder.CreateBox(
-              `WoodResource${index}`,
-              { width: 0.85, height: 0.65, depth: 0.85 },
-              scene
-            )
-          : MeshBuilder.CreatePolyhedron(
-              `StoneResource${index}`,
-              { type: 1, size: 0.55 },
-              scene
-            );
+      let mesh: Mesh;
 
-      mesh.position.set(x, type === "wood" ? 0.38 : 0.5, z);
-      mesh.material = type === "wood" ? woodMat : grayMat;
+      if (type === "wood") {
+        mesh = MeshBuilder.CreateBox(
+          `WoodResource${index}`,
+          { width: 0.85, height: 0.65, depth: 0.85 },
+          scene
+        );
+        mesh.position.set(x, 0.38, z);
+        mesh.material = woodMat;
+      } else {
+        // Low-poly rounded rock instead of a sharp diamond-shaped polyhedron.
+        mesh = MeshBuilder.CreateSphere(
+          `StoneResource${index}`,
+          { diameter: 1, segments: 8, slice: 0.85 },
+          scene
+        );
+        const variation = 0.82 + Math.random() * 0.3;
+        mesh.scaling.set(
+          variation * (0.9 + Math.random() * 0.25),
+          variation * (0.7 + Math.random() * 0.25),
+          variation * (0.85 + Math.random() * 0.3)
+        );
+        mesh.position.set(x, 0.34, z);
+        mesh.rotation.set(
+          (Math.random() - 0.5) * 0.35,
+          Math.random() * Math.PI * 2,
+          (Math.random() - 0.5) * 0.35
+        );
+        mesh.material = stoneMat;
+      }
+
       mesh.isPickable = false;
-
       resources.push({ type, mesh, x, z, collected: false });
     };
 
