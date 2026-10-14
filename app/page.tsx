@@ -6,6 +6,7 @@ import {
   Color3,
   Color4,
   DirectionalLight,
+  DynamicTexture,
   Engine,
   HemisphericLight,
   Mesh,
@@ -13,6 +14,7 @@ import {
   Scene,
   ShadowGenerator,
   StandardMaterial,
+  Texture,
   Vector3,
 } from "@babylonjs/core";
 
@@ -174,6 +176,187 @@ export default function Home() {
       "BonusHeartHighlight",
       new Color3(1, 0.75, 0.8)
     );
+
+    // PROCEDURAL WORLD TEXTURES: drawn in code, so no image downloads are needed.
+    const makePatternTexture = (
+      name: string,
+      drawPattern: (ctx: CanvasRenderingContext2D, size: number) => void,
+      repeatsU = 1,
+      repeatsV = 1
+    ) => {
+      const texture = new DynamicTexture(
+        name,
+        { width: 512, height: 512 },
+        scene,
+        false
+      );
+      const ctx = texture.getContext();
+      drawPattern(ctx, 512);
+      texture.update(false);
+      texture.wrapU = Texture.WRAP_ADDRESSMODE;
+      texture.wrapV = Texture.WRAP_ADDRESSMODE;
+      texture.uScale = repeatsU;
+      texture.vScale = repeatsV;
+      texture.anisotropicFilteringLevel = 4;
+      return texture;
+    };
+
+    const grassTexture = makePatternTexture(
+      "GrassTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#4d9b43";
+        ctx.fillRect(0, 0, size, size);
+        for (let i = 0; i < 1800; i++) {
+          const x = Math.random() * size;
+          const y = Math.random() * size;
+          const shade = Math.random();
+          ctx.strokeStyle = shade > 0.5 ? "#76b957" : "#347c35";
+          ctx.lineWidth = 1 + Math.random() * 2;
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 2 - Math.random() * 6);
+          ctx.stroke();
+        }
+        for (let i = 0; i < 90; i++) {
+          ctx.fillStyle = i % 2 ? "rgba(35,105,39,0.12)" : "rgba(190,218,100,0.12)";
+          ctx.beginPath();
+          ctx.ellipse(Math.random() * size, Math.random() * size, 5 + Math.random() * 15, 3 + Math.random() * 9, Math.random(), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      },
+      16,
+      16
+    );
+
+    const plasterTexture = makePatternTexture(
+      "HousePlasterTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#ead1a4";
+        ctx.fillRect(0, 0, size, size);
+        for (let i = 0; i < 2600; i++) {
+          const light = Math.random() > 0.5;
+          ctx.fillStyle = light ? "rgba(255,247,220,0.28)" : "rgba(133,91,49,0.10)";
+          ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 4, 1 + Math.random() * 3);
+        }
+      },
+      2,
+      2
+    );
+
+    const terracottaTexture = makePatternTexture(
+      "TerracottaRoofTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#8f3328";
+        ctx.fillRect(0, 0, size, size);
+        const tileW = 64;
+        const tileH = 34;
+        for (let row = 0; row < size / tileH + 1; row++) {
+          const offset = row % 2 ? -tileW / 2 : 0;
+          for (let col = -1; col < size / tileW + 1; col++) {
+            const x = col * tileW + offset;
+            const y = row * tileH;
+            ctx.fillStyle = ["#a84432", "#b94e37", "#963729", "#c05a3c"][Math.floor(Math.random() * 4)];
+            ctx.beginPath();
+            ctx.roundRect(x + 2, y + 2, tileW - 4, tileH - 3, 5);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(70,24,20,0.45)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(255,190,130,0.22)";
+            ctx.beginPath();
+            ctx.moveTo(x + 8, y + 6);
+            ctx.lineTo(x + tileW - 9, y + 6);
+            ctx.stroke();
+          }
+        }
+      },
+      2,
+      2
+    );
+
+    const timberTexture = makePatternTexture(
+      "TimberPlankTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#87552f";
+        ctx.fillRect(0, 0, size, size);
+        const plankW = 64;
+        for (let x = 0; x < size; x += plankW) {
+          ctx.fillStyle = ["#9c673b", "#80502d", "#a16b3d", "#734629"][Math.floor(x / plankW) % 4];
+          ctx.fillRect(x + 2, 0, plankW - 4, size);
+          ctx.strokeStyle = "rgba(45,25,13,0.65)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, size);
+          ctx.stroke();
+          for (let j = 0; j < 9; j++) {
+            const y = Math.random() * size;
+            ctx.strokeStyle = "rgba(55,30,14,0.22)";
+            ctx.lineWidth = 1 + Math.random() * 2;
+            ctx.beginPath();
+            ctx.moveTo(x + 8, y);
+            ctx.bezierCurveTo(x + 20, y - 4, x + 35, y + 4, x + plankW - 8, y - 1);
+            ctx.stroke();
+          }
+        }
+      },
+      2,
+      2
+    );
+
+    const barnTexture = makePatternTexture(
+      "RedBarnPlankTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#a92f2c";
+        ctx.fillRect(0, 0, size, size);
+        const plankW = 48;
+        for (let x = 0; x < size; x += plankW) {
+          ctx.fillStyle = ["#c23c36", "#ad302d", "#982926", "#c7463c"][Math.floor(x / plankW) % 4];
+          ctx.fillRect(x + 2, 0, plankW - 4, size);
+          ctx.fillStyle = "rgba(75,17,17,0.5)";
+          ctx.fillRect(x, 0, 3, size);
+          ctx.fillStyle = "rgba(255,190,160,0.16)";
+          ctx.fillRect(x + 5, 0, 2, size);
+        }
+        for (let y = 0; y < size; y += 128) {
+          ctx.fillStyle = "rgba(70,15,15,0.42)";
+          ctx.fillRect(0, y, size, 4);
+        }
+      },
+      2,
+      2
+    );
+
+    const asphaltTexture = makePatternTexture(
+      "RoadAsphaltTexture",
+      (ctx, size) => {
+        ctx.fillStyle = "#454951";
+        ctx.fillRect(0, 0, size, size);
+        for (let i = 0; i < 4500; i++) {
+          const shade = Math.floor(65 + Math.random() * 65);
+          ctx.fillStyle = `rgba(${shade},${shade},${shade},${Math.random() * 0.35})`;
+          const dot = 1 + Math.random() * 2;
+          ctx.fillRect(Math.random() * size, Math.random() * size, dot, dot);
+        }
+      },
+      1,
+      1
+    );
+
+    grassMat.diffuseTexture = grassTexture;
+    grassMat.diffuseColor = Color3.White();
+    wallMat.diffuseTexture = plasterTexture;
+    wallMat.diffuseColor = Color3.White();
+    roofMat.diffuseTexture = terracottaTexture;
+    roofMat.diffuseColor = Color3.White();
+    woodMat.diffuseTexture = timberTexture;
+    woodMat.diffuseColor = Color3.White();
+    barnRedMat.diffuseTexture = barnTexture;
+    barnRedMat.diffuseColor = Color3.White();
+    roofWoodMat.diffuseTexture = timberTexture;
+    roofWoodMat.diffuseColor = new Color3(0.62, 0.62, 0.62);
+    roadMat.diffuseTexture = asphaltTexture;
+    roadMat.diffuseColor = Color3.White();
 
     // Lighting and shadows.
     const hemiLight = new HemisphericLight(
@@ -1816,8 +1999,7 @@ export default function Home() {
         </p>
       </div>
 
-      ```
-  <div className="pointer-events-none absolute bottom-4 right-4 left-auto max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-xs text-white shadow-xl sm:bottom-6 sm:right-6 sm:max-h-[55vh] sm:p-4 sm:text-sm">
+      <div className="pointer-events-none absolute bottom-4 right-4 left-auto max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-xs text-white shadow-xl sm:bottom-6 sm:right-6 sm:max-h-[55vh] sm:p-4 sm:text-sm">
     {mode === "road" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">ROAD-BUILDING MODE</p>
@@ -1852,7 +2034,6 @@ export default function Home() {
       </>
     )}
   </div>
-```
 
     </main>
   );
