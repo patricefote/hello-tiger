@@ -164,6 +164,8 @@ export default function Home() {
     const woodMat = makeMaterial("Wood", new Color3(0.52, 0.30, 0.13));
     const blueMat = makeMaterial("Blue", new Color3(0.12, 0.42, 0.9));
     const leafMat = makeMaterial("Leaves", new Color3(0.12, 0.43, 0.16));
+    const leafLightMat = makeMaterial("LeavesLight", new Color3(0.19, 0.52, 0.20));
+    const leafDeepMat = makeMaterial("LeavesDeep", new Color3(0.08, 0.34, 0.13));
     const manaMat = makeMaterial("ManaCrystal", new Color3(0.1, 0.95, 1));
     const whiteMat = makeMaterial("White", new Color3(0.96, 0.96, 0.96));
     const blackMat = makeMaterial("Black", new Color3(0.035, 0.035, 0.035));
@@ -554,23 +556,54 @@ export default function Home() {
     ];
 
     treePositions.forEach(([x, z], i) => {
+      // Slightly tapered trunks give each tree a more natural silhouette.
+      const trunkHeight = 2.1 + (i % 4) * 0.16;
       const trunk = MeshBuilder.CreateCylinder(
         `TreeTrunk${i}`,
-        { height: 2, diameter: 0.65 },
+        {
+          height: trunkHeight,
+          diameterTop: 0.38,
+          diameterBottom: 0.68,
+          tessellation: 14,
+        },
         scene
       );
-      trunk.position.set(x, 1, z);
+      trunk.position.set(x, trunkHeight / 2, z);
+      trunk.rotation.z = ((i % 3) - 1) * 0.035;
       trunk.material = woodMat;
       shadowGenerator.addShadowCaster(trunk);
 
-      const leaves = MeshBuilder.CreateSphere(
-        `TreeLeaves${i}`,
-        { diameter: 2.8 },
-        scene
-      );
-      leaves.position.set(x, 2.6, z);
-      leaves.material = leafMat;
-      shadowGenerator.addShadowCaster(leaves);
+      // Overlapping rounded foliage lobes create a fuller canopy instead of
+      // one obvious sphere. Small variations keep the tree line from repeating.
+      const canopy = [
+        { x: 0, y: 0.12, z: 0, d: 2.15, mat: leafMat },
+        { x: -0.72, y: -0.12, z: 0.05, d: 1.72, mat: leafLightMat },
+        { x: 0.70, y: -0.10, z: -0.08, d: 1.78, mat: leafMat },
+        { x: 0.02, y: 0.02, z: 0.70, d: 1.62, mat: leafDeepMat },
+        { x: -0.04, y: 0.05, z: -0.68, d: 1.68, mat: leafLightMat },
+        { x: 0.02, y: 0.86, z: -0.02, d: 1.58, mat: leafMat },
+      ];
+
+      canopy.forEach((lobe, j) => {
+        const leaves = MeshBuilder.CreateSphere(
+          `TreeLeaves${i}_${j}`,
+          { diameter: lobe.d, segments: 16 },
+          scene
+        );
+        const sizeVariation = 0.94 + ((i * 7 + j * 3) % 9) * 0.015;
+        leaves.position.set(
+          x + lobe.x * sizeVariation,
+          trunkHeight + 0.35 + lobe.y * sizeVariation,
+          z + lobe.z * sizeVariation
+        );
+        leaves.scaling.set(
+          sizeVariation * (j === 0 ? 1.03 : 1),
+          sizeVariation * (0.93 + ((i + j) % 3) * 0.035),
+          sizeVariation * (0.98 + ((i + 2 * j) % 3) * 0.025)
+        );
+        leaves.material = lobe.mat;
+        shadowGenerator.addShadowCaster(leaves);
+      });
     });
 
     // Tiger.
