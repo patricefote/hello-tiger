@@ -9,6 +9,7 @@ import {
   DynamicTexture,
   Engine,
   HemisphericLight,
+  ImageProcessingConfiguration,
   Mesh,
   MeshBuilder,
   Scene,
@@ -118,9 +119,8 @@ export default function Home() {
       powerPreference: "high-performance",
     });
 
-    engine.setHardwareScalingLevel(
-      window.devicePixelRatio > 1 ? 1.25 : 1
-    );
+    // Keep the game crisp instead of deliberately rendering at reduced resolution.
+    engine.setHardwareScalingLevel(1);
 
     const scene = new Scene(engine);
     scene.clearColor = new Color4(0.55, 0.78, 0.98, 1);
@@ -129,6 +129,14 @@ export default function Home() {
     scene.fogDensity = 0.004;
     scene.fogColor = new Color3(0.55, 0.78, 0.98);
 
+    // A restrained cinematic grade adds depth without making the kid-friendly
+    // palette too dark or oversaturated.
+    scene.imageProcessingConfiguration.toneMappingEnabled = true;
+    scene.imageProcessingConfiguration.toneMappingType =
+      ImageProcessingConfiguration.TONEMAPPING_ACES;
+    scene.imageProcessingConfiguration.exposure = 1.05;
+    scene.imageProcessingConfiguration.contrast = 1.12;
+
     const makeMaterial = (
       name: string,
       color: Color3,
@@ -136,6 +144,9 @@ export default function Home() {
     ) => {
       const mat = new StandardMaterial(name, scene);
       mat.diffuseColor = color;
+      // Keep surfaces softly lit instead of producing tiny, distracting glossy hotspots.
+      mat.specularColor = new Color3(0.10, 0.10, 0.10);
+      mat.specularPower = 48;
       mat.alpha = alpha;
 
       if (alpha < 1) {
@@ -452,7 +463,7 @@ export default function Home() {
       new Vector3(0, 1, 0),
       scene
     );
-    hemiLight.intensity = 0.85;
+    hemiLight.intensity = 0.72;
 
     const sunLight = new DirectionalLight(
       "SunLight",
@@ -460,12 +471,13 @@ export default function Home() {
       scene
     );
     sunLight.position = new Vector3(10, 18, -10);
-    sunLight.intensity = 0.8;
+    sunLight.intensity = 1.0;
 
-    const shadowGenerator = new ShadowGenerator(1024, sunLight);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 16;
-    shadowGenerator.setDarkness(0.25);
+    // Higher-resolution filtered shadows make characters and scenery feel grounded.
+    const shadowGenerator = new ShadowGenerator(2048, sunLight);
+    shadowGenerator.usePercentageCloserFiltering = true;
+    shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    shadowGenerator.setDarkness(0.22);
 
     const ground = MeshBuilder.CreateGround(
       "Ground",
@@ -492,7 +504,7 @@ export default function Home() {
         diameterTop: 0,
         diameterBottom: 8,
         height: 3.5,
-        tessellation: 4,
+        tessellation: 20,
       },
       scene
     );
@@ -655,7 +667,7 @@ export default function Home() {
 
       const leftLobe = MeshBuilder.CreateSphere(
         `BonusHeart${index}Left`,
-        { diameter: 0.48, segments: 10 },
+        { diameter: 0.48, segments: 24 },
         scene
       );
       leftLobe.position.set(x - 0.16, 0.83, z);
@@ -666,7 +678,7 @@ export default function Home() {
 
       const rightLobe = MeshBuilder.CreateSphere(
         `BonusHeart${index}Right`,
-        { diameter: 0.48, segments: 10 },
+        { diameter: 0.48, segments: 24 },
         scene
       );
       rightLobe.position.set(x + 0.16, 0.83, z);
@@ -681,7 +693,7 @@ export default function Home() {
           height: 0.4,
           diameterTop: 0,
           diameterBottom: 0.38,
-          tessellation: 4,
+          tessellation: 20,
         },
         scene
       );
@@ -694,7 +706,7 @@ export default function Home() {
 
       const highlight = MeshBuilder.CreateSphere(
         `BonusHeart${index}Highlight`,
-        { diameter: 0.1, segments: 8 },
+        { diameter: 0.1, segments: 20 },
         scene
       );
       highlight.position.set(x - 0.2, 0.92, z - 0.04);
@@ -830,7 +842,7 @@ export default function Home() {
         // Low-poly rounded rock instead of a sharp diamond-shaped polyhedron.
         mesh = MeshBuilder.CreateSphere(
           `StoneResource${index}`,
-          { diameter: 1, segments: 8, slice: 0.85 },
+          { diameter: 1, segments: 24 },
           scene
         );
         const variation = 0.82 + Math.random() * 0.3;
@@ -1240,7 +1252,7 @@ export default function Home() {
 
       const projectile = MeshBuilder.CreateSphere(
         `MagicBolt${performance.now()}`,
-        { diameter: 0.38, segments: 8 },
+        { diameter: 0.38, segments: 20 },
         scene
       );
       projectile.position.set(
