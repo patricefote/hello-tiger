@@ -24,6 +24,11 @@ type Cat = {
   x: number;
   z: number;
   parts: Mesh[];
+  partOffsets: Vector3[];
+  targetX: number;
+  targetZ: number;
+  yaw: number;
+  restingUntil: number;
   rescued: boolean;
   housed: boolean;
   barnIndex: number | null;
@@ -856,8 +861,24 @@ export default function Home() {
       });
     });
 
-    // Cats.
+    // Cats wander between nearby trees and pause in the shade before moving on.
     const cats: Cat[] = [];
+
+    const chooseCatRestSpot = (fromX: number, fromZ: number) => {
+      const nearbyTrees = treePositions.filter(([treeX, treeZ]) => {
+        const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
+        return distance > 4 && distance < 22;
+      });
+      const choices = nearbyTrees.length > 0 ? nearbyTrees : treePositions;
+      const [treeX, treeZ] = choices[Math.floor(Math.random() * choices.length)];
+      const angle = Math.random() * Math.PI * 2;
+      // Keep each cat close enough to the trunk to look like it is resting under the canopy.
+      const radius = 0.75 + Math.random() * 0.55;
+      return {
+        x: Math.max(-37, Math.min(37, treeX + Math.cos(angle) * radius)),
+        z: Math.max(-37, Math.min(37, treeZ + Math.sin(angle) * radius)),
+      };
+    };
 
     const createCat = (
       name: string,
@@ -937,11 +958,19 @@ export default function Home() {
       );
       tail.rotation.z = Math.PI / 3;
 
+      const firstRestSpot = chooseCatRestSpot(x, z);
       cats.push({
         name,
         x,
         z,
         parts,
+        partOffsets: parts.map(
+          (part) => new Vector3(part.position.x - x, part.position.y, part.position.z - z)
+        ),
+        targetX: firstRestSpot.x,
+        targetZ: firstRestSpot.z,
+        yaw: 0,
+        restingUntil: 0,
         rescued: false,
         housed: false,
         barnIndex: null,
@@ -1769,6 +1798,45 @@ export default function Home() {
     window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", clearKeys);
 
+    const updateCats = (dt: number, now: number) => {
+      for (const cat of cats) {
+        // Rescued cats are carried by the rescue flow; housed cats belong in their barn slots.
+        if (cat.rescued || cat.housed) continue;
+
+        const dx = cat.targetX - cat.x;
+        const dz = cat.targetZ - cat.z;
+        const distance = Math.hypot(dx, dz);
+
+        if (distance < 0.28) {
+          if (cat.restingUntil === 0) {
+            cat.restingUntil = now + 2800 + Math.random() * 4200;
+          } else if (now >= cat.restingUntil) {
+            const nextSpot = chooseCatRestSpot(cat.x, cat.z);
+            cat.targetX = nextSpot.x;
+            cat.targetZ = nextSpot.z;
+            cat.restingUntil = 0;
+          }
+        } else {
+          const speed = 0.035 * dt;
+          const step = Math.min(speed, distance);
+          cat.x += (dx / distance) * step;
+          cat.z += (dz / distance) * step;
+          cat.yaw = Math.atan2(dx, dz);
+        }
+
+        // Move and turn the whole little cat model around its center.
+        const cos = Math.cos(cat.yaw);
+        const sin = Math.sin(cat.yaw);
+        cat.parts.forEach((part, index) => {
+          const offset = cat.partOffsets[index];
+          part.position.x = cat.x + offset.x * cos + offset.z * sin;
+          part.position.y = offset.y;
+          part.position.z = cat.z - offset.x * sin + offset.z * cos;
+          part.rotation.y = cat.yaw;
+        });
+      }
+    };
+
     engine.runRenderLoop(() => {
       if (scene.isDisposed) return;
 
@@ -1776,6 +1844,8 @@ export default function Home() {
       const deltaMs = Math.min(now - previousFrameTime, 50);
       previousFrameTime = now;
       const dt = deltaMs / 16.667;
+
+      updateCats(dt, now);
 
       if (buildMode === "none") {
         const moveSpeed = 0.12 * dt;
