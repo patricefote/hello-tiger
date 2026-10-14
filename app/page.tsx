@@ -2174,6 +2174,7 @@ export default function Home() {
         const dx = cat.targetX - cat.x;
         const dz = cat.targetZ - cat.z;
         const distance = Math.hypot(dx, dz);
+        const isWalking = distance >= 0.28;
 
         if (distance < 0.28) {
           if (cat.restingUntil === 0) {
@@ -2197,10 +2198,26 @@ export default function Home() {
         const sin = Math.sin(cat.yaw);
         cat.parts.forEach((part, index) => {
           const offset = cat.partOffsets[index];
+          const phase = cat.x * 1.7 + cat.z * 0.9;
+          const walkBounce = isWalking
+            ? Math.abs(Math.sin(now / 88 + phase)) * 0.045
+            : Math.sin(now / 620 + phase) * 0.012;
           part.position.x = cat.x + offset.x * cos + offset.z * sin;
-          part.position.y = offset.y;
+          part.position.y = offset.y + walkBounce;
           part.position.z = cat.z - offset.x * sin + offset.z * cos;
           part.rotation.y = cat.yaw;
+
+          // Tiny idle animations make each kitten feel alive without adding
+          // extra meshes or expensive animation systems.
+          if (part.name.includes("Tail")) {
+            part.rotation.z = Math.PI / 3 + Math.sin(now / 360 + phase) * 0.22;
+          } else if (part.name.includes("Eye")) {
+            const blinkCycle = (now + Math.abs(cat.x * 173 + cat.z * 91)) % 3600;
+            const blink = blinkCycle > 0 && blinkCycle < 145
+              ? Math.max(0.12, Math.abs(blinkCycle - 72.5) / 72.5)
+              : 1;
+            part.scaling.y = blink;
+          }
         });
       }
     };
