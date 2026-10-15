@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
@@ -31,6 +31,8 @@ type Cat = {
   z: number;
   parts: Mesh[];
   partOffsets: Vector3[];
+  modelRoot: TransformNode | null;
+  animationGroups: AnimationGroup[];
   targetX: number;
   targetZ: number;
   yaw: number;
@@ -1864,6 +1866,8 @@ export default function Home() {
         x,
         z,
         parts,
+        modelRoot: null,
+        animationGroups: [],
         partOffsets: parts.map(
           (part) => new Vector3(part.position.x - x, part.position.y, part.position.z - z)
         ),
@@ -1880,6 +1884,103 @@ export default function Home() {
     createCat("Mittens", -4, -3, whiteMat);
     createCat("Pumpkin", 5, -5, orangeMat);
     createCat("Shadow", -7, 1, grayMat);
+
+    // Load the animated model for Mittens only; retain procedural fallbacks.
+    void (async () => {
+      const cat = cats.find((entry) => entry.name === "Mittens");
+      if (!cat) return;
+
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "an_animated_cat.glb",
+          scene
+        );
+
+        const modelMeshes = imported.meshes.filter(
+          (mesh) => mesh.getTotalVertices() > 0
+        );
+
+        if (modelMeshes.length === 0) {
+          throw new Error("The GLB contains no renderable meshes.");
+        }
+
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+
+        modelMeshes.forEach((mesh) => {
+          mesh.computeWorldMatrix(true);
+          const bounds = mesh.getBoundingInfo().boundingBox;
+          minY = Math.min(minY, bounds.minimumWorld.y);
+          maxY = Math.max(maxY, bounds.maximumWorld.y);
+        });
+
+        const modelHeight = maxY - minY;
+        if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
+          throw new Error("Could not determine the animated cat height.");
+        }
+
+        const scale = 1.1 / modelHeight;
+        const visualRoot = new TransformNode("MittensAnimatedRoot", scene);
+        visualRoot.position.set(cat.x, 0, cat.z);
+
+        const importedRoot =
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes.find((mesh) => mesh.parent === null);
+
+        if (importedRoot) {
+          importedRoot.parent = visualRoot;
+          importedRoot.scaling.scaleInPlace(scale);
+          importedRoot.position.y += -minY * scale;
+        } else {
+          modelMeshes.forEach((mesh) => {
+            if (!mesh.parent) {
+              mesh.parent = visualRoot;
+              mesh.scaling.scaleInPlace(scale);
+            }
+          });
+        }
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh !== importedRoot && !mesh.parent) {
+            mesh.parent = visualRoot;
+          }
+
+          if (mesh.getTotalVertices() > 0) {
+            mesh.isPickable = false;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        cat.modelRoot = visualRoot;
+        cat.animationGroups = imported.animationGroups;
+
+        const animation =
+          cat.animationGroups.find((group) => /idle|stand|breath/i.test(group.name)) ??
+          cat.animationGroups[0];
+
+        if (animation) animation.start(true);
+
+        // Hide the procedural cat only after the GLB loads successfully.
+        cat.parts.forEach((part) => {
+          part.setEnabled(false);
+          shadowGenerator.removeShadowCaster(part);
+        });
+
+        console.info(
+          "Animated cat loaded:",
+          cat.name,
+          "animation:",
+          animation?.name ?? "none"
+        );
+      } catch (error) {
+        console.error(
+          "Could not load the animated cat; using the procedural fallback.",
+          error
+        );
+      }
+    })();
 
     // Resource pickups.
     const resources: Resource[] = [];
@@ -2425,12 +2526,18 @@ export default function Home() {
       const deltaX = targetX - nextCat.x;
       const deltaZ = targetZ - nextCat.z;
 
-      nextCat.parts.forEach((part) => {
-        part.position.x += deltaX;
-        part.position.z += deltaZ;
-        part.setEnabled(true);
-        shadowGenerator.addShadowCaster(part);
-      });
+      if (nextCat.modelRoot) {
+        nextCat.modelRoot.position.set(targetX, 0, targetZ);
+        nextCat.modelRoot.rotation.y = nextCat.yaw;
+        nextCat.modelRoot.setEnabled(true);
+      } else {
+        nextCat.parts.forEach((part) => {
+          part.position.x += deltaX;
+          part.position.z += deltaZ;
+          part.setEnabled(true);
+          shadowGenerator.addShadowCaster(part);
+        });
+      }
 
       nextCat.x = targetX;
       nextCat.z = targetZ;
@@ -2440,7 +2547,7 @@ export default function Home() {
       catsHousedCount += 1;
       setCatsHoused(catsHousedCount);
       setMessage(
-        `${nextCat.name} is now visible in Barn ${barnIndex + 1}! ðŸˆðŸ `
+        `${nextCat.name} is now visible in Barn ${barnIndex + 1}! Ã°Å¸ÂË†Ã°Å¸ÂÂ `
       );
     };
 
@@ -2799,6 +2906,7 @@ export default function Home() {
 
         if (closestCat && closestCatDistance < 2.1) {
           closestCat.rescued = true;
+          closestCat.modelRoot?.setEnabled(false);
           closestCat.parts.forEach((part) => part.setEnabled(false));
           setCatsRescued(cats.filter((cat) => cat.rescued).length);
           setMessage(
@@ -2930,6 +3038,12 @@ export default function Home() {
         }
 
         // Move and turn the whole little cat model around its center.
+        if (cat.modelRoot) {
+          cat.modelRoot.position.set(cat.x, 0, cat.z);
+          cat.modelRoot.rotation.y = cat.yaw;
+          continue;
+        }
+
         const cos = Math.cos(cat.yaw);
         const sin = Math.sin(cat.yaw);
         cat.parts.forEach((part, index) => {
@@ -3144,7 +3258,7 @@ export default function Home() {
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! â¤ï¸ Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! Ã¢ÂÂ¤Ã¯Â¸Â Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -3466,7 +3580,7 @@ export default function Home() {
         {gameWon && (
           <div className="mt-3 rounded-xl border border-yellow-300/50 bg-yellow-400/20 p-3">
             <div className="text-lg font-black text-yellow-200">
-              ðŸ† YOU DID IT, TIGER!
+              Ã°Å¸Ââ€  YOU DID IT, TIGER!
             </div>
             <div className="mt-1 text-sm">
               All cats are safe and the yard is protected!
@@ -3474,89 +3588,96 @@ export default function Home() {
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Tiger health</div>
-            <div className="text-lg font-bold">{health}/13 health</div>
-            <div className="text-xs text-slate-300">Find bonus hearts to heal</div>
-          </div>
+       ```tsx
+<div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Tiger health</div>
+   <div className="text-lg font-bold">{health}/13 {"\u{2764}\u{FE0F}"}</div>
+    <div className="text-xs text-slate-300">Find bonus hearts to heal</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Mana</div>
-            <div className="text-lg font-bold">{mana} ðŸ’Ž</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Mana</div>
+    <div className="text-lg font-bold">{mana} {"\u{1F48E}"}</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Slimes defeated</div>
-            <div className="text-lg font-bold">{slimesDefeated}/4</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Slimes defeated</div>
+    <div className="text-lg font-bold">{slimesDefeated}/4</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Magic charm</div>
-            <div className="text-lg font-bold">
-              {charmCrafted ? "Crafted âœ¨" : "3 mana"}
-            </div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Magic charm</div>
+    <div className="text-lg font-bold">
+      {charmCrafted ? <>Crafted {"\u{2728}"}</> : "3 mana"}
+    </div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Cats rescued</div>
-            <div className="text-lg font-bold">{catsRescued}/3 ðŸˆ</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Cats rescued</div>
+    <div className="text-lg font-bold">
+      {catsRescued}/3 {"\u{1F408}"}
+    </div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Cats housed</div>
-            <div className="text-lg font-bold">{catsHoused}/3 ðŸ </div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Cats housed</div>
+    <div className="text-lg font-bold">
+      {catsHoused}/3 {"\u{1F3E0}"}
+    </div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Wood</div>
-            <div className="text-lg font-bold">{wood} ðŸªµ</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Wood</div>
+    <div className="text-lg font-bold">{wood} {"\u{1FAB5}"}</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Stone</div>
-            <div className="text-lg font-bold">{stone} ðŸª¨</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Stone</div>
+    <div className="text-lg font-bold">{stone} {"\u{1FAA8}"}</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Barns built</div>
-            <div className="text-lg font-bold">{barnCount} ðŸ </div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Barns built</div>
+    <div className="text-lg font-bold">{barnCount} {"\u{1F3E0}"}</div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Road tiles</div>
-            <div className="text-lg font-bold">{roadCount} ðŸ›£ï¸</div>
-          </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Road tiles</div>
+    <div className="text-lg font-bold">
+      {roadCount} {"\u{1F6E3}\u{FE0F}"}
+    </div>
+  </div>
 
-          <div className="rounded-xl bg-white/10 px-3 py-2">
-            <div className="text-xs text-slate-300">Water blocks</div>
-            <div className="text-lg font-bold">{waterCount} ðŸ’§</div>
-          </div>
-        </div>
+  <div className="rounded-xl bg-white/10 px-3 py-2">
+    <div className="text-xs text-slate-300">Water blocks</div>
+    <div className="text-lg font-bold">{waterCount} {"\u{1F4A7}"}</div>
+  </div>
+</div>
 
-        <div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
-          <div className="text-xs text-slate-300">Milo&apos;s quest</div>
-          <div className="font-bold">
-            {questComplete
-              ? "Complete! +3 bonus mana âœ“"
-              : questStarted
-                ? `Defeat 3 slimes: ${Math.min(slimesDefeated, 3)}/3`
-                : "Find Milo and press E"}
-          </div>
-        </div>
+<div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
+  <div className="text-xs text-slate-300">Milo&apos;s quest</div>
+  <div className="font-bold">
+    {questComplete
+      ? <>Complete! +3 bonus mana {"\u{2713}"}</>
+      : questStarted
+        ? `Defeat 3 slimes: ${Math.min(slimesDefeated, 3)}/3`
+        : "Find Milo and press E"}
+  </div>
+</div>
 
-        <div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
-          <div className="text-xs text-slate-300">Selected activity</div>
-          <div className="font-bold">
-            {mode === "barn"
-              ? "Place a barn"
-              : mode === "road"
-                ? "Build a road tile"
-                : mode === "water"
-                  ? "Place a water block"
-                  : "Explore and defend the yard"}
-          </div>
-        </div>
+<div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
+  <div className="text-xs text-slate-300">Selected activity</div>
+  <div className="font-bold">
+    {mode === "barn"
+      ? "Place a barn"
+      : mode === "road"
+        ? "Build a road tile"
+        : mode === "water"
+          ? "Place a water block"
+          : "Explore and defend the yard"}
+  </div>
+</div>
 
         <div className="pointer-events-auto mt-3 rounded-xl border border-amber-200/30 bg-amber-400/10 p-3">
           <div className="text-xs text-amber-100">Cat care</div>
@@ -3657,3 +3778,4 @@ export default function Home() {
     </main>
   );
 }
+
