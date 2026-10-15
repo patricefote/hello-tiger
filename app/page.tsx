@@ -750,6 +750,17 @@ export default function Home() {
     }
 
     // Expanded tree locations.
+    // Shared wind animation registry for foliage and ground plants.
+    // Very subtle motion adds life without creating per-frame allocations.
+    const windSwayMeshes: {
+      mesh: Mesh;
+      baseRotationX: number;
+      baseRotationZ: number;
+      phase: number;
+      amplitude: number;
+      speed: number;
+    }[] = [];
+
     const treePositions = [
       [-11, -7], [11, -8], [-12, 5], [11, 3],
       [-3, -12], [5, -12], [14, 9],
@@ -854,6 +865,16 @@ export default function Home() {
           sizeVariation * (0.98 + ((i + 2 * j) % 3) * 0.025)
         );
         leaves.material = lobe.mat;
+        leaves.rotation.x = ((i + j) % 2 ? 1 : -1) * 0.012;
+        leaves.rotation.z = ((i + j) % 3 - 1) * 0.018;
+        windSwayMeshes.push({
+          mesh: leaves,
+          baseRotationX: leaves.rotation.x,
+          baseRotationZ: leaves.rotation.z,
+          phase: i * 0.71 + j * 0.93,
+          amplitude: 0.018 + ((i + j) % 3) * 0.006,
+          speed: 0.00048 + ((i + j) % 4) * 0.000045,
+        });
         shadowGenerator.addShadowCaster(leaves);
       });
 
@@ -912,6 +933,14 @@ export default function Home() {
         );
         mesh.rotation.set(0.12, angle, Math.cos(i + blade) * 0.22);
         mesh.material = (i + blade) % 3 === 0 ? grassBladeLightMat : grassBladeMat;
+        windSwayMeshes.push({
+          mesh,
+          baseRotationX: mesh.rotation.x,
+          baseRotationZ: mesh.rotation.z,
+          phase: i * 0.83 + blade * 1.37,
+          amplitude: 0.075 + ((i + blade) % 3) * 0.018,
+          speed: 0.0011 + (blade % 2) * 0.00015,
+        });
         mesh.isPickable = false;
         mesh.receiveShadows = false;
       }
@@ -2841,6 +2870,16 @@ export default function Home() {
           "YOU DID IT, TIGER! Every cat is safe, Milo's quest is complete, and the yard is protected!"
         );
       }
+
+      // A soft, layered breeze moves the treetops and grass independently.
+      // The slow phase offsets avoid a synchronized, mechanical wave.
+      windSwayMeshes.forEach((item) => {
+        const breeze = Math.sin(now * item.speed + item.phase);
+        const secondaryBreeze = Math.sin(now * item.speed * 0.63 + item.phase * 1.7);
+        item.mesh.rotation.x = item.baseRotationX + breeze * item.amplitude * 0.38;
+        item.mesh.rotation.z = item.baseRotationZ + breeze * item.amplitude
+          + secondaryBreeze * item.amplitude * 0.24;
+      });
 
       // Clouds drift slowly and bob just a little, keeping the sky lively but calm.
       skyClouds.forEach((cloud) => {
