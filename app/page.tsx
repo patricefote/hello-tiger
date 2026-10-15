@@ -2403,7 +2403,7 @@ export default function Home() {
       });
 
       if (barnIndex < 0) {
-        setMessage("All barn spots are full. Build another barn for more cats!");
+        <p>B - Build another barn (5 wood + 3 stone)</p>
         return;
       }
 
@@ -3421,7 +3421,36 @@ export default function Home() {
         title={isFullscreen ? "Exit fullscreen (Esc)" : "Play fullscreen"}
         className="absolute right-4 top-4 z-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/30 bg-slate-950/85 px-4 py-3 text-sm font-extrabold text-white shadow-xl backdrop-blur transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:right-6 sm:top-6"
       >
-        <span aria-hidden="true" className="text-lg leading-none">{isFullscreen ? "â¤¢" : "â›¶"}</span>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          className="h-5 w-5 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {isFullscreen ? (
+            <>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+              <path d="M9 9 3 3" />
+              <path d="M15 9 21 3" />
+              <path d="m9 15-6 6" />
+              <path d="m15 15 6 6" />
+            </>
+          ) : (
+            <>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+            </>
+          )}
+        </svg>
         <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
       </button>
 
@@ -3448,7 +3477,7 @@ export default function Home() {
         <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Tiger health</div>
-            <div className="text-lg font-bold">{health}/13 â¤ï¸</div>
+            <div className="text-lg font-bold">{health}/13 health</div>
             <div className="text-xs text-slate-300">Find bonus hearts to heal</div>
           </div>
 
@@ -3545,7 +3574,7 @@ export default function Home() {
             onClick={() => houseCatActionRef.current?.()}
             className="mt-2 w-full rounded-lg border border-amber-100/30 bg-amber-500 px-3 py-2 text-sm font-extrabold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            ðŸˆ House a Cat (H)
+            House a Cat (H)
           </button>
         </div>
 
@@ -3585,42 +3614,42 @@ export default function Home() {
       <>
         <p className="mb-2 font-bold text-cyan-300">WATER-BLOCK MODE</p>
         <p>Recipe: 1 mana + 2 stone per block</p>
-        <p>WASD / Arrows â€” Move water preview</p>
-        <p>Enter â€” Place block</p>
-        <p>Y / Escape â€” Exit</p>
+        <p>WASD / Arrows - Move water preview</p>
+        <p>Enter - Place block</p>
+        <p>Y / Escape - Exit</p>
       </>
     ) : mode === "road" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">ROAD-BUILDING MODE</p>
         <p>Recipe: 1 wood + 2 stone per tile</p>
-        <p>WASD / Arrows â€” Move road preview</p>
-        <p>Q / R â€” Rotate</p>
-        <p>Enter â€” Place tile</p>
-        <p>T / Escape â€” Exit</p>
+        <p>WASD / Arrows - Move road preview</p>
+        <p>Q / R - Rotate</p>
+        <p>Enter - Place tile</p>
+        <p>T / Escape - Exit</p>
       </>
     ) : mode === "barn" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">BARN-PLACEMENT MODE</p>
         <p>Recipe: 5 wood + 3 stone per barn</p>
-        <p>WASD / Arrows â€” Move barn</p>
-        <p>Q / R â€” Rotate</p>
-        <p>Enter â€” Build another barn</p>
-        <p>B / Escape â€” Cancel</p>
+        <p>WASD / Arrows - Move barn</p>
+        <p>Q / R - Rotate</p>
+        <p>Enter - Build another barn</p>
+        <p>B / Escape - Cancel</p>
       </>
     ) : (
       <>
         <p className="mb-2 font-bold text-sky-200">HOW TO PLAY</p>
-        <p>WASD / Arrows â€” Move Tiger</p>
-        <p>Space â€” Jump and stomp slimes while descending</p>
-        <p>F â€” Fire magic bolt (costs 1 mana)</p>
-        <p>C â€” Craft magic charm (costs 3 mana)</p>
-        <p>E â€” Talk to Milo, rescue cats, collect wood and stone</p>
-        <p>H / House a Cat button â€” House a rescued cat in a barn</p>
-        <p>â¤ï¸ Collect floating bonus hearts to heal up to 13 health</p>
-        <p>B â€” Build another barn (5 wood + 3 stone)</p>
-        <p>T â€” Place road tiles (1 wood + 2 stone each)</p>
-        <p>Y â€” Place water blocks (1 mana + 2 stone each)</p>
-        <p>Mouse drag / scroll â€” Rotate camera / zoom</p>
+        <p>WASD / Arrows - Move Tiger</p>
+        <p>Space - Jump and stomp slimes while descending</p>
+        <p>F - Fire magic bolt (costs 1 mana)</p>
+        <p>C - Craft magic charm (costs 3 mana)</p>
+        <p>E - Talk to Milo, rescue cats, collect wood and stone</p>
+        <p>H / House a Cat button - House a rescued cat in a barn</p>
+        <p>Collect floating bonus hearts to heal up to 13 health</p>
+        <p>B - Build another barn (5 wood + 3 stone)</p>
+        <p>T - Place road tiles (1 wood + 2 stone each)</p>
+        <p>Y - Place water blocks (1 mana + 2 stone each)</p>
+        <p>Mouse drag / scroll - Rotate camera / zoom</p>
       </>
     )}
   </div>
