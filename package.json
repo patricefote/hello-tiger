@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@babylonjs/core": "^9.30.0",
+    "@babylonjs/loaders": "^9.30.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
