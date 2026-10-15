@@ -175,9 +175,10 @@ export default function Home() {
     const scene = new Scene(engine);
     scene.clearColor = new Color4(0.55, 0.78, 0.98, 1);
     scene.skipPointerMovePicking = true;
-    scene.fogMode = Scene.FOGMODE_EXP;
-    scene.fogDensity = 0.004;
-    scene.fogColor = new Color3(0.55, 0.78, 0.98);
+
+    // Disable fog to remove the enclosed-horizon haze.
+    scene.fogMode = Scene.FOGMODE_NONE;
+    scene.fogDensity = 0;
 
     // A restrained cinematic grade adds depth without making the kid-friendly
     // palette too dark or oversaturated.
@@ -552,14 +553,113 @@ export default function Home() {
     shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
     shadowGenerator.setDarkness(0.22);
 
-    const ground = MeshBuilder.CreateGround(
-      "Ground",
-      { width: 80, height: 80 },
+    
+const ground = MeshBuilder.CreateGround(
+  "Ground",
+  { width: 160, height: 100 },
+  scene
+);
+ground.position.x = 40;
+ground.material = grassMat;
+ground.isPickable = false;
+ground.receiveShadows = true;
+
+
+    // LAKE: a natural-looking oval on the new eastern countryside.
+    const lakeShoreMat = new StandardMaterial("LakeShoreMaterial", scene);
+    lakeShoreMat.diffuseColor = new Color3(0.48, 0.39, 0.25);
+    lakeShoreMat.specularColor = new Color3(0.12, 0.12, 0.12);
+
+    const lakeShore = MeshBuilder.CreateCylinder(
+      "LakeSandyShore",
+      { diameter: 23, height: 0.12, tessellation: 64 },
       scene
     );
-    ground.material = grassMat;
-    ground.isPickable = false;
-    ground.receiveShadows = true;
+    lakeShore.position.set(72, 0.035, 16);
+    lakeShore.scaling.z = 0.68;
+    lakeShore.material = lakeShoreMat;
+    lakeShore.isPickable = false;
+    lakeShore.receiveShadows = true;
+
+    const lakeWaterMat = new StandardMaterial("LakeWaterMaterial", scene);
+    lakeWaterMat.diffuseColor = new Color3(0.12, 0.58, 0.82);
+    lakeWaterMat.emissiveColor = new Color3(0.025, 0.12, 0.18);
+    lakeWaterMat.specularColor = new Color3(0.75, 0.9, 1);
+    lakeWaterMat.specularPower = 96;
+    lakeWaterMat.alpha = 0.9;
+
+    const lake = MeshBuilder.CreateCylinder(
+      "LakeWater",
+      { diameter: 20.5, height: 0.1, tessellation: 64 },
+      scene
+    );
+    lake.position.set(72, 0.12, 16);
+    lake.scaling.z = 0.68;
+    lake.material = lakeWaterMat;
+    lake.isPickable = false;
+    lake.receiveShadows = false;
+
+    
+    
+            // MEDIEVAL COUNTRYSIDE HOUSE
+        // Preserve the house and decorations while hiding the sand plane and horizon dome.
+        void (async () => {
+          try {
+            const imported = await SceneLoader.ImportMeshAsync(
+              "",
+              "/models/",
+              "stylized_medieval_house_scene_by_jungle_jim.glb",
+              scene
+            );
+
+            const houseRoot = imported.meshes[0];
+
+            if (!houseRoot || scene.isDisposed) {
+              imported.meshes.forEach((mesh) => mesh.dispose());
+              return;
+            }
+
+            houseRoot.name = "MedievalCountrysideHouseRoot";
+            houseRoot.position.set(94, 0, -12);
+            houseRoot.scaling.setAll(2.5);
+
+            imported.meshes.forEach((mesh) => {
+              // Hide the imported sand ground plane.
+              if (mesh.name === "Object_4") {
+                mesh.setEnabled(false);
+                return;
+              }
+
+              // Hide the suspected forest-textured horizon dome.
+              if (
+                mesh.name === "Object_10" &&
+                mesh.parent?.name === "Sphere_4"
+              ) {
+                mesh.setEnabled(false);
+                return;
+              }
+
+              // Preserve the house, smoke, and remaining decorations.
+              if (mesh.getTotalVertices() > 0) {
+                mesh.isPickable = false;
+                mesh.receiveShadows = true;
+              }
+            });
+
+            console.log("MEDIEVAL HOUSE — DOME TEST", {
+              hiddenMeshes: ["Object_4", "Object_10"],
+              transformNodes: imported.transformNodes.map((node) => ({
+                name: node.name,
+                parent: node.parent?.name ?? "(none)",
+                position: node.getAbsolutePosition().asArray(),
+                scaling: node.scaling.asArray(),
+              })),
+            });
+
+      } catch (error) {
+        console.error("Failed to load medieval house:", error);
+      }
+    })();
 
     // A cheerful sun and soft, drifting clouds bring the yard to life.
     // These are decorative sky meshes: they never block movement or picking.
@@ -1082,6 +1182,8 @@ export default function Home() {
     );
     tiger.position.set(0, 0.8, 1);
     tiger.material = blueMat;
+
+
 
     // The invisible gameplay root remains responsible for movement, collision,
     // camera tracking, pickups, and combat. The downloaded GLB is rendered on a
@@ -3131,9 +3233,9 @@ export default function Home() {
             isGrounded = true;
           }
         }
-
-        tiger.position.x = Math.max(-38, Math.min(38, tiger.position.x));
-        tiger.position.z = Math.max(-38, Math.min(38, tiger.position.z));
+    
+            tiger.position.x = Math.max(-38, Math.min(118, tiger.position.x));
+            tiger.position.z = Math.max(-48, Math.min(48, tiger.position.z));
       }
 
       // Fluid, visible kid locomotion. Blend movement in/out so limbs ease into
