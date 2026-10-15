@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
@@ -1570,7 +1570,7 @@ export default function Home() {
         const imported = await SceneLoader.ImportMeshAsync(
           "",
           "/models/",
-          "tiger.glb",
+          "mixamo-idle.glb",
           scene
         );
 
@@ -1644,7 +1644,7 @@ export default function Home() {
         tigerModelLoaded = true;
         setMessage("Tiger's 3D model is ready!");
       } catch (error) {
-        console.error("Could not load /models/tiger.glb. Keeping the built-in Tiger model.", error);
+        console.error("Could not load /models/mixamo-idle.glb. Keeping the built-in Tiger model.", error);
         setMessage("Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed.");
       }
     })();
@@ -2418,7 +2418,7 @@ export default function Home() {
       catsHousedCount += 1;
       setCatsHoused(catsHousedCount);
       setMessage(
-        `${nextCat.name} is now visible in Barn ${barnIndex + 1}! 🐈🏠`
+        `${nextCat.name} is now visible in Barn ${barnIndex + 1}! ðŸˆðŸ `
       );
     };
 
@@ -3090,7 +3090,7 @@ export default function Home() {
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! ❤️ Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! â¤ï¸ Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -3367,7 +3367,7 @@ export default function Home() {
         title={isFullscreen ? "Exit fullscreen (Esc)" : "Play fullscreen"}
         className="absolute right-4 top-4 z-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/30 bg-slate-950/85 px-4 py-3 text-sm font-extrabold text-white shadow-xl backdrop-blur transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:right-6 sm:top-6"
       >
-        <span aria-hidden="true" className="text-lg leading-none">{isFullscreen ? "⤢" : "⛶"}</span>
+        <span aria-hidden="true" className="text-lg leading-none">{isFullscreen ? "â¤¢" : "â›¶"}</span>
         <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
       </button>
 
@@ -3383,7 +3383,7 @@ export default function Home() {
         {gameWon && (
           <div className="mt-3 rounded-xl border border-yellow-300/50 bg-yellow-400/20 p-3">
             <div className="text-lg font-black text-yellow-200">
-              🏆 YOU DID IT, TIGER!
+              ðŸ† YOU DID IT, TIGER!
             </div>
             <div className="mt-1 text-sm">
               All cats are safe and the yard is protected!
@@ -3394,13 +3394,13 @@ export default function Home() {
         <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Tiger health</div>
-            <div className="text-lg font-bold">{health}/13 ❤️</div>
+            <div className="text-lg font-bold">{health}/13 â¤ï¸</div>
             <div className="text-xs text-slate-300">Find bonus hearts to heal</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Mana</div>
-            <div className="text-lg font-bold">{mana} 💎</div>
+            <div className="text-lg font-bold">{mana} ðŸ’Ž</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
@@ -3411,43 +3411,43 @@ export default function Home() {
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Magic charm</div>
             <div className="text-lg font-bold">
-              {charmCrafted ? "Crafted ✨" : "3 mana"}
+              {charmCrafted ? "Crafted âœ¨" : "3 mana"}
             </div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Cats rescued</div>
-            <div className="text-lg font-bold">{catsRescued}/3 🐈</div>
+            <div className="text-lg font-bold">{catsRescued}/3 ðŸˆ</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Cats housed</div>
-            <div className="text-lg font-bold">{catsHoused}/3 🏠</div>
+            <div className="text-lg font-bold">{catsHoused}/3 ðŸ </div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Wood</div>
-            <div className="text-lg font-bold">{wood} 🪵</div>
+            <div className="text-lg font-bold">{wood} ðŸªµ</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Stone</div>
-            <div className="text-lg font-bold">{stone} 🪨</div>
+            <div className="text-lg font-bold">{stone} ðŸª¨</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Barns built</div>
-            <div className="text-lg font-bold">{barnCount} 🏠</div>
+            <div className="text-lg font-bold">{barnCount} ðŸ </div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Road tiles</div>
-            <div className="text-lg font-bold">{roadCount} 🛣️</div>
+            <div className="text-lg font-bold">{roadCount} ðŸ›£ï¸</div>
           </div>
 
           <div className="rounded-xl bg-white/10 px-3 py-2">
             <div className="text-xs text-slate-300">Water blocks</div>
-            <div className="text-lg font-bold">{waterCount} 💧</div>
+            <div className="text-lg font-bold">{waterCount} ðŸ’§</div>
           </div>
         </div>
 
@@ -3455,7 +3455,7 @@ export default function Home() {
           <div className="text-xs text-slate-300">Milo&apos;s quest</div>
           <div className="font-bold">
             {questComplete
-              ? "Complete! +3 bonus mana ✓"
+              ? "Complete! +3 bonus mana âœ“"
               : questStarted
                 ? `Defeat 3 slimes: ${Math.min(slimesDefeated, 3)}/3`
                 : "Find Milo and press E"}
@@ -3491,7 +3491,7 @@ export default function Home() {
             onClick={() => houseCatActionRef.current?.()}
             className="mt-2 w-full rounded-lg border border-amber-100/30 bg-amber-500 px-3 py-2 text-sm font-extrabold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            🐈 House a Cat (H)
+            ðŸˆ House a Cat (H)
           </button>
         </div>
 
@@ -3531,42 +3531,42 @@ export default function Home() {
       <>
         <p className="mb-2 font-bold text-cyan-300">WATER-BLOCK MODE</p>
         <p>Recipe: 1 mana + 2 stone per block</p>
-        <p>WASD / Arrows — Move water preview</p>
-        <p>Enter — Place block</p>
-        <p>Y / Escape — Exit</p>
+        <p>WASD / Arrows â€” Move water preview</p>
+        <p>Enter â€” Place block</p>
+        <p>Y / Escape â€” Exit</p>
       </>
     ) : mode === "road" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">ROAD-BUILDING MODE</p>
         <p>Recipe: 1 wood + 2 stone per tile</p>
-        <p>WASD / Arrows — Move road preview</p>
-        <p>Q / R — Rotate</p>
-        <p>Enter — Place tile</p>
-        <p>T / Escape — Exit</p>
+        <p>WASD / Arrows â€” Move road preview</p>
+        <p>Q / R â€” Rotate</p>
+        <p>Enter â€” Place tile</p>
+        <p>T / Escape â€” Exit</p>
       </>
     ) : mode === "barn" ? (
       <>
         <p className="mb-2 font-bold text-cyan-300">BARN-PLACEMENT MODE</p>
         <p>Recipe: 5 wood + 3 stone per barn</p>
-        <p>WASD / Arrows — Move barn</p>
-        <p>Q / R — Rotate</p>
-        <p>Enter — Build another barn</p>
-        <p>B / Escape — Cancel</p>
+        <p>WASD / Arrows â€” Move barn</p>
+        <p>Q / R â€” Rotate</p>
+        <p>Enter â€” Build another barn</p>
+        <p>B / Escape â€” Cancel</p>
       </>
     ) : (
       <>
         <p className="mb-2 font-bold text-sky-200">HOW TO PLAY</p>
-        <p>WASD / Arrows — Move Tiger</p>
-        <p>Space — Jump and stomp slimes while descending</p>
-        <p>F — Fire magic bolt (costs 1 mana)</p>
-        <p>C — Craft magic charm (costs 3 mana)</p>
-        <p>E — Talk to Milo, rescue cats, collect wood and stone</p>
-        <p>H / House a Cat button — House a rescued cat in a barn</p>
-        <p>❤️ Collect floating bonus hearts to heal up to 13 health</p>
-        <p>B — Build another barn (5 wood + 3 stone)</p>
-        <p>T — Place road tiles (1 wood + 2 stone each)</p>
-        <p>Y — Place water blocks (1 mana + 2 stone each)</p>
-        <p>Mouse drag / scroll — Rotate camera / zoom</p>
+        <p>WASD / Arrows â€” Move Tiger</p>
+        <p>Space â€” Jump and stomp slimes while descending</p>
+        <p>F â€” Fire magic bolt (costs 1 mana)</p>
+        <p>C â€” Craft magic charm (costs 3 mana)</p>
+        <p>E â€” Talk to Milo, rescue cats, collect wood and stone</p>
+        <p>H / House a Cat button â€” House a rescued cat in a barn</p>
+        <p>â¤ï¸ Collect floating bonus hearts to heal up to 13 health</p>
+        <p>B â€” Build another barn (5 wood + 3 stone)</p>
+        <p>T â€” Place road tiles (1 wood + 2 stone each)</p>
+        <p>Y â€” Place water blocks (1 mana + 2 stone each)</p>
+        <p>Mouse drag / scroll â€” Rotate camera / zoom</p>
       </>
     )}
   </div>
