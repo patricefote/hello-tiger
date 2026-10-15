@@ -176,7 +176,7 @@ export default function Home() {
     const roofMat = makeMaterial("HouseRoof", new Color3(0.55, 0.19, 0.15));
     const woodMat = makeMaterial("Wood", new Color3(0.52, 0.30, 0.13));
     const blueMat = makeMaterial("Blue", new Color3(0.12, 0.42, 0.9));
-    const kidSkinMat = makeMaterial("TigerSkin", new Color3(0.72, 0.43, 0.29));
+    const kidSkinMat = makeMaterial("TigerSkin", new Color3(0.79, 0.51, 0.36));
     const kidHairMat = makeMaterial("TigerHair", new Color3(0.22, 0.105, 0.055));
     const kidShortsMat = makeMaterial("TigerShorts", new Color3(0.16, 0.31, 0.72));
     const kidShoeMat = makeMaterial("TigerShoes", new Color3(0.92, 0.22, 0.16));
