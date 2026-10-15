@@ -2159,8 +2159,12 @@ export default function Home() {
     let nextIdleDanceSeconds = 8 + Math.random() * 10;
     let tigerIsDancing = false;
 
+    
+    let tigerIsCasting = false;
+    let tigerCastSecondsRemaining = 0;
+
     const switchTigerModelAnimation = (
-      kind: "idle" | "walk" | "run" | "jump" | "dance"
+      kind: "idle" | "walk" | "run" | "jump" | "dance" | "cast"
     ) => {
       if (!tigerModelLoaded || tigerModelAnimations.length === 0) return;
 
@@ -2170,6 +2174,7 @@ export default function Home() {
         run: "Motion_Standing_Sprint_Forward",
         jump: "Motion_Jump",
         dance: "Motion_Hip_Hop_Dancing",
+        cast: "Motion_Spell_Cast",
       };
 
       const fallbackPatterns: Record<typeof kind, RegExp[]> = {
@@ -2178,6 +2183,7 @@ export default function Home() {
         run: [/sprint/i, /running/i, /run/i],
         jump: [/jump/i],
         dance: [/hip.hop.dancing/i, /danc/i],
+        cast: [/spell.cast/i],
       };
 
       const next =
@@ -2189,9 +2195,15 @@ export default function Home() {
       if (!next || next.name === activeTigerAnimation) return;
 
       tigerModelAnimations.forEach((group) => group.stop());
-      next.start(true);
+      next.start(kind !== "cast");
       activeTigerAnimation = next.name;
+
+    if (kind === "cast") {
+  tigerIsCasting = true;
+  tigerCastSecondsRemaining = (next.to - next.from) / 60;
+}
     };
+
     let isGrounded = true;
 
     const keys = new Set<string>();
@@ -2560,7 +2572,7 @@ export default function Home() {
         setMessage("You need 1 mana to cast a magic bolt. Find a blue crystal!");
         return;
       }
-
+      switchTigerModelAnimation("cast");
       manaCount -= 1;
       setMana(manaCount);
 
@@ -3178,38 +3190,57 @@ export default function Home() {
       tigerVisualRoot.position.z = tiger.position.z;
       tigerVisualRoot.rotation.y = tiger.rotation.y + Math.PI;
       tigerVisualRoot.rotation.z = tiger.rotation.z;
-      if (tigerAirborne) {
-        tigerIsDancing = false;
-        idleSeconds = 0;
-        idleDanceSeconds = 0;
-        nextIdleDanceSeconds = 8 + Math.random() * 10;
-        switchTigerModelAnimation("jump");
-      } else if (tigerMoving) {
-        tigerIsDancing = false;
-        idleSeconds = 0;
-        idleDanceSeconds = 0;
-        nextIdleDanceSeconds = 8 + Math.random() * 10;
-        switchTigerModelAnimation(keys.has("shift") ? "run" : "walk");
-      } else if (tigerIsDancing) {
-        idleDanceSeconds += dt / 60;
-        if (idleDanceSeconds >= idleDanceDurationSeconds) {
+      
+   if (tigerIsCasting) {
+  tigerCastSecondsRemaining -= dt / 60;
+
+  if (tigerCastSecondsRemaining <= 0) {
+    tigerIsCasting = false;
+    tigerCastSecondsRemaining = 0;
+
+    // Stop the cast and let the normal controller choose
+    // the correct animation for Tiger's current state.
+    tigerModelAnimations.forEach((group) => group.stop());
+    activeTigerAnimation = "";
+  }
+}
+
+      if (!tigerIsCasting) {
+        if (tigerAirborne) {
           tigerIsDancing = false;
           idleSeconds = 0;
           idleDanceSeconds = 0;
-          nextIdleDanceSeconds = 10 + Math.random() * 16;
-          switchTigerModelAnimation("idle");
-        } else {
-          switchTigerModelAnimation("dance");
-        }
-      } else {
-        idleSeconds += dt / 60;
-        if (idleSeconds >= nextIdleDanceSeconds) {
-          tigerIsDancing = true;
+          nextIdleDanceSeconds = 8 + Math.random() * 10;
+          switchTigerModelAnimation("jump");
+        } else if (tigerMoving) {
+          tigerIsDancing = false;
+          idleSeconds = 0;
           idleDanceSeconds = 0;
-          idleDanceDurationSeconds = 6 + Math.random() * 5;
-          switchTigerModelAnimation("dance");
+          nextIdleDanceSeconds = 8 + Math.random() * 10;
+          switchTigerModelAnimation(keys.has("shift") ? "run" : "walk");
+        } else if (tigerIsDancing) {
+          idleDanceSeconds += dt / 60;
+
+          if (idleDanceSeconds >= idleDanceDurationSeconds) {
+            tigerIsDancing = false;
+            idleSeconds = 0;
+            idleDanceSeconds = 0;
+            nextIdleDanceSeconds = 10 + Math.random() * 16;
+            switchTigerModelAnimation("idle");
+          } else {
+            switchTigerModelAnimation("dance");
+          }
         } else {
-          switchTigerModelAnimation("idle");
+          idleSeconds += dt / 60;
+
+          if (idleSeconds >= nextIdleDanceSeconds) {
+            tigerIsDancing = true;
+            idleDanceSeconds = 0;
+            idleDanceDurationSeconds = 6 + Math.random() * 5;
+            switchTigerModelAnimation("dance");
+          } else {
+            switchTigerModelAnimation("idle");
+          }
         }
       }
 
