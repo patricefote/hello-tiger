@@ -182,6 +182,11 @@ export default function Home() {
     const kidShoeMat = makeMaterial("TigerShoes", new Color3(0.92, 0.22, 0.16));
     const kidSoleMat = makeMaterial("TigerSoles", new Color3(0.96, 0.91, 0.78));
     const kidMouthMat = makeMaterial("TigerSmile", new Color3(0.32, 0.12, 0.10));
+    const kidHairHighlightMat = makeMaterial("TigerHairHighlights", new Color3(0.34, 0.17, 0.085));
+    const kidInnerEarMat = makeMaterial("TigerInnerEar", new Color3(0.66, 0.28, 0.25));
+    const kidShirtTrimMat = makeMaterial("TigerShirtTrim", new Color3(0.08, 0.27, 0.64));
+    const kidShirtLightMat = makeMaterial("TigerShirtLight", new Color3(0.22, 0.54, 0.98));
+    const kidStitchMat = makeMaterial("TigerStitching", new Color3(0.99, 0.82, 0.33));
     const leafMat = makeMaterial("Leaves", new Color3(0.12, 0.43, 0.16));
     const leafLightMat = makeMaterial("LeavesLight", new Color3(0.19, 0.52, 0.20));
     const leafDeepMat = makeMaterial("LeavesDeep", new Color3(0.08, 0.34, 0.13));
@@ -1075,6 +1080,23 @@ export default function Home() {
     tigerHighTop.material = kidHairMat;
     tigerHighTop.isPickable = false;
 
+    // Rounded hair coils along the front edge break up the simple cylinder
+    // and give Tiger's high-top a more sculpted, signature silhouette.
+    const hairCoils: [number, number, number, number][] = [
+      [-0.20, 0.91, 0.275, 0.15], [-0.105, 0.945, 0.315, 0.145],
+      [0, 0.955, 0.325, 0.15], [0.105, 0.945, 0.315, 0.145],
+      [0.20, 0.91, 0.275, 0.15], [-0.13, 1.075, 0.12, 0.105],
+      [0.02, 1.09, 0.12, 0.11], [0.15, 1.07, 0.12, 0.10],
+    ];
+    hairCoils.forEach(([x, y, z, diameter], i) => {
+      const coil = MeshBuilder.CreateSphere(`TigerHairCoil${i}`, { diameter, segments: 10 }, scene);
+      coil.parent = tiger;
+      coil.position.set(x, y, z);
+      coil.scaling.set(1.0, 0.82, 0.76);
+      coil.material = i % 3 === 0 ? kidHairHighlightMat : kidHairMat;
+      coil.isPickable = false;
+    });
+
     // Ears peek out from the sides of the head.
     const tigerArmPivots: TransformNode[] = [];
     const tigerLegPivots: TransformNode[] = [];
@@ -1087,6 +1109,16 @@ export default function Home() {
       ear.parent = tiger;
       ear.position.set(side * 0.36, 0.63, 0.015);
       ear.material = kidSkinMat;
+      const innerEar = MeshBuilder.CreateSphere(
+        `TigerInnerEar${side}`,
+        { diameter: 0.105, segments: 9 },
+        scene
+      );
+      innerEar.parent = tiger;
+      innerEar.position.set(side * 0.375, 0.635, 0.095);
+      innerEar.scaling.set(0.72, 1.0, 0.38);
+      innerEar.material = kidInnerEarMat;
+      innerEar.isPickable = false;
 
       // Shoulder pivots let the arms swing naturally instead of rotating around
       // their own centers. Hands follow each sleeve as one connected limb.
@@ -1190,6 +1222,34 @@ export default function Home() {
     tigerNose.parent = tiger;
     tigerNose.position.set(0, 0.56, 0.43);
     tigerNose.material = pinkMat;
+    tigerNose.position.y = 0.575;
+    tigerNose.scaling.set(1.0, 0.78, 0.72);
+
+    // Soft cheek/muzzle pads add depth to the face instead of leaving it as a
+    // flat arrangement of eyes and a dot nose.
+    for (const side of [-1, 1]) {
+      const muzzle = MeshBuilder.CreateSphere(
+        `TigerMuzzle${side}`,
+        { diameter: 0.19, segments: 12 },
+        scene
+      );
+      muzzle.parent = tiger;
+      muzzle.position.set(side * 0.073, 0.525, 0.385);
+      muzzle.scaling.set(1.0, 0.72, 0.55);
+      muzzle.material = kidSkinMat;
+      muzzle.isPickable = false;
+
+      const cheek = MeshBuilder.CreateSphere(
+        `TigerCheek${side}`,
+        { diameter: 0.115, segments: 10 },
+        scene
+      );
+      cheek.parent = tiger;
+      cheek.position.set(side * 0.245, 0.555, 0.328);
+      cheek.scaling.set(1.0, 0.62, 0.3);
+      cheek.material = kidSkinMat;
+      cheek.isPickable = false;
+    }
 
     const tigerSmile = MeshBuilder.CreateSphere(
       "TigerSmile",
@@ -1200,6 +1260,32 @@ export default function Home() {
     tigerSmile.position.set(0, 0.49, 0.405);
     tigerSmile.scaling.set(1, 0.28, 0.45);
     tigerSmile.material = kidMouthMat;
+    tigerSmile.position.y = 0.475;
+    tigerSmile.scaling.set(0.9, 0.24, 0.32);
+
+    // Tiny smile corners and freckles make the expression read at game distance.
+    for (const side of [-1, 1]) {
+      const smileCorner = MeshBuilder.CreateSphere(
+        `TigerSmileCorner${side}`,
+        { diameter: 0.035, segments: 7 },
+        scene
+      );
+      smileCorner.parent = tiger;
+      smileCorner.position.set(side * 0.065, 0.49, 0.413);
+      smileCorner.material = kidMouthMat;
+      smileCorner.isPickable = false;
+      for (let dot = 0; dot < 2; dot++) {
+        const freckle = MeshBuilder.CreateSphere(
+          `TigerFreckle${side}_${dot}`,
+          { diameter: 0.018, segments: 6 },
+          scene
+        );
+        freckle.parent = tiger;
+        freckle.position.set(side * (0.19 + dot * 0.035), 0.535 - dot * 0.025, 0.392 - dot * 0.012);
+        freckle.material = kidInnerEarMat;
+        freckle.isPickable = false;
+      }
+    }
 
     // A small sunshine-yellow backpack adds a playful adventurer detail.
     const backpackMat = makeMaterial("TigerBackpack", new Color3(1, 0.68, 0.12));
@@ -1211,6 +1297,26 @@ export default function Home() {
     backpack.parent = tiger;
     backpack.position.set(0, 0.12, -0.31);
     backpack.material = backpackMat;
+
+    const backpackPocket = MeshBuilder.CreateBox(
+      "TigerBackpackPocket",
+      { width: 0.25, height: 0.16, depth: 0.035 },
+      scene
+    );
+    backpackPocket.parent = tiger;
+    backpackPocket.position.set(0, 0.045, -0.415);
+    backpackPocket.material = kidStitchMat;
+    backpackPocket.isPickable = false;
+    const backpackBadge = MeshBuilder.CreateSphere(
+      "TigerBackpackBadge",
+      { diameter: 0.075, segments: 8 },
+      scene
+    );
+    backpackBadge.parent = tiger;
+    backpackBadge.position.set(0, 0.17, -0.415);
+    backpackBadge.scaling.z = 0.35;
+    backpackBadge.material = whiteMat;
+    backpackBadge.isPickable = false;
 
     // Bright front straps make the little backpack read clearly from the camera.
     for (const side of [-1, 1]) {
@@ -1261,6 +1367,74 @@ export default function Home() {
       toe.material = shirtBadgeMat;
       toe.isPickable = false;
     }
+
+    // Tailored shirt details: collar, cuffs, hem, and a little utility pocket.
+    const collar = MeshBuilder.CreateSphere(
+      "TigerShirtCollar",
+      { diameter: 0.28, segments: 12 },
+      scene
+    );
+    collar.parent = tiger;
+    collar.position.set(0, 0.355, 0.285);
+    collar.scaling.set(1.0, 0.42, 0.22);
+    collar.material = kidShirtTrimMat;
+    collar.isPickable = false;
+
+    const shirtPocket = MeshBuilder.CreateBox(
+      "TigerShirtPocket",
+      { width: 0.145, height: 0.14, depth: 0.025 },
+      scene
+    );
+    shirtPocket.parent = tiger;
+    shirtPocket.position.set(-0.205, -0.005, 0.278);
+    shirtPocket.rotation.z = -0.04;
+    shirtPocket.material = kidShirtLightMat;
+    shirtPocket.isPickable = false;
+
+    const pocketStitch = MeshBuilder.CreateBox(
+      "TigerPocketStitch",
+      { width: 0.10, height: 0.012, depth: 0.008 },
+      scene
+    );
+    pocketStitch.parent = tiger;
+    pocketStitch.position.set(-0.205, 0.047, 0.294);
+    pocketStitch.material = kidStitchMat;
+    pocketStitch.isPickable = false;
+
+    const shirtHem = MeshBuilder.CreateBox(
+      "TigerShirtHem",
+      { width: 0.48, height: 0.055, depth: 0.27 },
+      scene
+    );
+    shirtHem.parent = tiger;
+    shirtHem.position.set(0, -0.285, 0.015);
+    shirtHem.material = kidShirtTrimMat;
+    shirtHem.isPickable = false;
+
+    // Small bright lace bars and toe caps make the red high-top sneakers legible.
+    tigerLegPivots.forEach((legPivot, index) => {
+      const toeCap = MeshBuilder.CreateSphere(
+        `TigerShoeToeCap${index}`,
+        { diameter: 0.13, segments: 9 },
+        scene
+      );
+      toeCap.parent = legPivot;
+      toeCap.position.set(0, -0.335, 0.235);
+      toeCap.scaling.set(1.0, 0.55, 0.48);
+      toeCap.material = kidSoleMat;
+      toeCap.isPickable = false;
+      for (let lace = 0; lace < 3; lace++) {
+        const laceBar = MeshBuilder.CreateBox(
+          `TigerShoeLace${index}_${lace}`,
+          { width: 0.105, height: 0.018, depth: 0.018 },
+          scene
+        );
+        laceBar.parent = legPivot;
+        laceBar.position.set(0, -0.29 + lace * 0.035, 0.235 - lace * 0.018);
+        laceBar.material = kidSoleMat;
+        laceBar.isPickable = false;
+      }
+    });
 
     const camera = new ArcRotateCamera(
       "Camera",
