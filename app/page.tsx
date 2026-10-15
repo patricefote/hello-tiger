@@ -95,6 +95,8 @@ type WaterTile = {
 
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gameRootRef = useRef<HTMLElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const houseCatActionRef = useRef<(() => void) | null>(null);
 
   const [catsRescued, setCatsRescued] = useState(0);
@@ -120,6 +122,34 @@ export default function Home() {
   );
 
   const canHouseCat = barnBuilt && catsRescued > catsHoused;
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(document.fullscreenElement === gameRootRef.current);
+      // Make Babylon recalculate the canvas dimensions after entering or leaving
+      // fullscreen, including when the user presses Escape.
+      window.dispatchEvent(new Event("resize"));
+    };
+
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const gameRoot = gameRootRef.current;
+    if (!gameRoot) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await gameRoot.requestFullscreen();
+      }
+    } catch (error) {
+      console.error("Unable to toggle fullscreen mode:", error);
+      setMessage("Fullscreen isn't available in this browser window. Try opening the game in a regular browser tab.");
+    }
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -3113,11 +3143,22 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-sky-300">
+    <main ref={gameRootRef} className="relative h-[100dvh] min-h-0 w-screen overflow-hidden bg-sky-300">
       <canvas
         ref={canvasRef}
-        className="h-full w-full touch-none outline-none"
+        className="absolute inset-0 h-full w-full touch-none outline-none"
       />
+
+      <button
+        type="button"
+        onClick={() => void toggleFullscreen()}
+        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        title={isFullscreen ? "Exit fullscreen (Esc)" : "Play fullscreen"}
+        className="absolute right-4 top-4 z-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/30 bg-slate-950/85 px-4 py-3 text-sm font-extrabold text-white shadow-xl backdrop-blur transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:right-6 sm:top-6"
+      >
+        <span aria-hidden="true" className="text-lg leading-none">{isFullscreen ? "⤢" : "⛶"}</span>
+        <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+      </button>
 
       <div className="pointer-events-none absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-2xl border border-white/30 bg-slate-950/80 p-4 text-white shadow-xl sm:left-6 sm:top-6 sm:p-5">
         <h1 className="text-2xl font-black tracking-wide sm:text-3xl">
