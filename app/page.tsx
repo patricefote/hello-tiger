@@ -16,6 +16,7 @@ import {
   ShadowGenerator,
   StandardMaterial,
   Texture,
+  TransformNode,
   Vector3,
 } from "@babylonjs/core";
 
@@ -175,7 +176,7 @@ export default function Home() {
     const roofMat = makeMaterial("HouseRoof", new Color3(0.55, 0.19, 0.15));
     const woodMat = makeMaterial("Wood", new Color3(0.52, 0.30, 0.13));
     const blueMat = makeMaterial("Blue", new Color3(0.12, 0.42, 0.9));
-    const kidSkinMat = makeMaterial("TigerSkin", new Color3(0.93, 0.66, 0.46));
+    const kidSkinMat = makeMaterial("TigerSkin", new Color3(0.72, 0.43, 0.29));
     const kidHairMat = makeMaterial("TigerHair", new Color3(0.22, 0.105, 0.055));
     const kidShortsMat = makeMaterial("TigerShorts", new Color3(0.16, 0.31, 0.72));
     const kidShoeMat = makeMaterial("TigerShoes", new Color3(0.92, 0.22, 0.16));
@@ -1010,7 +1011,7 @@ export default function Home() {
     tigerHead.material = kidSkinMat;
     shadowGenerator.addShadowCaster(tigerHead);
 
-    // Hair cap and little swept-up tufts make the silhouette read as a kid.
+    // Close-cropped base with a defined high-top silhouette.
     const tigerHair = MeshBuilder.CreateSphere(
       "TigerHairCap",
       { diameter: 0.78, segments: 16 },
@@ -1021,19 +1022,21 @@ export default function Home() {
     tigerHair.scaling.set(1.02, 0.48, 0.92);
     tigerHair.material = kidHairMat;
 
-    for (const [index, tuft] of [[0, -0.16], [1, 0], [2, 0.15]] as [number, number][]) {
-      const hairTuft = MeshBuilder.CreateSphere(
-        `TigerHairTuft${index}`,
-        { diameter: 0.22, segments: 10 },
-        scene
-      );
-      hairTuft.parent = tiger;
-      hairTuft.position.set(tuft, 1.055 + (index === 1 ? 0.035 : 0), 0.005);
-      hairTuft.scaling.set(0.82, 0.9, 0.75);
-      hairTuft.material = kidHairMat;
-    }
+    // A short, squared-off high-top sits above the close-cropped sides.
+    const tigerHighTop = MeshBuilder.CreateCylinder(
+      "TigerHighTop",
+      { height: 0.25, diameterTop: 0.43, diameterBottom: 0.53, tessellation: 12 },
+      scene
+    );
+    tigerHighTop.parent = tiger;
+    tigerHighTop.position.set(0, 1.045, -0.005);
+    tigerHighTop.scaling.z = 0.88;
+    tigerHighTop.material = kidHairMat;
+    tigerHighTop.isPickable = false;
 
     // Ears peek out from the sides of the head.
+    const tigerArmPivots: TransformNode[] = [];
+    const tigerLegPivots: TransformNode[] = [];
     for (const side of [-1, 1]) {
       const ear = MeshBuilder.CreateSphere(
         `TigerEar${side}`,
@@ -1044,15 +1047,21 @@ export default function Home() {
       ear.position.set(side * 0.36, 0.63, 0.015);
       ear.material = kidSkinMat;
 
-      // Short sleeves and little hands give the player a clear child silhouette.
+      // Shoulder pivots let the arms swing naturally instead of rotating around
+      // their own centers. Hands follow each sleeve as one connected limb.
+      const armPivot = new TransformNode(`TigerArmPivot${side}`, scene);
+      armPivot.parent = tiger;
+      armPivot.position.set(side * 0.29, 0.24, 0.015);
+      tigerArmPivots.push(armPivot);
+
       const arm = MeshBuilder.CreateCapsule(
         `TigerArm${side}`,
-        { height: 0.56, radius: 0.105, tessellation: 10 },
+        { height: 0.52, radius: 0.105, tessellation: 10 },
         scene
       );
-      arm.parent = tiger;
-      arm.position.set(side * 0.34, 0.02, 0.015);
-      arm.rotation.z = side * -0.24;
+      arm.parent = armPivot;
+      arm.position.set(side * 0.045, -0.22, 0);
+      arm.rotation.z = side * -0.12;
       arm.material = blueMat;
       shadowGenerator.addShadowCaster(arm);
 
@@ -1061,17 +1070,23 @@ export default function Home() {
         { diameter: 0.17, segments: 10 },
         scene
       );
-      hand.parent = tiger;
-      hand.position.set(side * 0.42, -0.25, 0.045);
+      hand.parent = armPivot;
+      hand.position.set(side * 0.065, -0.45, 0.035);
       hand.material = kidSkinMat;
+
+      // Hip pivots animate the legs and shoes together during walking.
+      const legPivot = new TransformNode(`TigerLegPivot${side}`, scene);
+      legPivot.parent = tiger;
+      legPivot.position.set(side * 0.17, -0.36, 0.015);
+      tigerLegPivots.push(legPivot);
 
       const leg = MeshBuilder.CreateCapsule(
         `TigerLeg${side}`,
-        { height: 0.48, radius: 0.13, tessellation: 10 },
+        { height: 0.46, radius: 0.13, tessellation: 10 },
         scene
       );
-      leg.parent = tiger;
-      leg.position.set(side * 0.17, -0.53, 0.015);
+      leg.parent = legPivot;
+      leg.position.set(0, -0.15, 0);
       leg.material = kidShortsMat;
       shadowGenerator.addShadowCaster(leg);
 
@@ -1080,8 +1095,8 @@ export default function Home() {
         { diameter: 0.3, segments: 12 },
         scene
       );
-      shoe.parent = tiger;
-      shoe.position.set(side * 0.18, -0.73, 0.105);
+      shoe.parent = legPivot;
+      shoe.position.set(0, -0.36, 0.09);
       shoe.scaling.set(1.08, 0.58, 1.35);
       shoe.material = kidShoeMat;
 
@@ -1090,8 +1105,8 @@ export default function Home() {
         { diameter: 0.29, segments: 10 },
         scene
       );
-      sole.parent = tiger;
-      sole.position.set(side * 0.18, -0.79, 0.11);
+      sole.parent = legPivot;
+      sole.position.set(0, -0.42, 0.095);
       sole.scaling.set(1.08, 0.22, 1.34);
       sole.material = kidSoleMat;
     }
@@ -1155,6 +1170,56 @@ export default function Home() {
     backpack.parent = tiger;
     backpack.position.set(0, 0.12, -0.31);
     backpack.material = backpackMat;
+
+    // Bright front straps make the little backpack read clearly from the camera.
+    for (const side of [-1, 1]) {
+      const strap = MeshBuilder.CreateBox(
+        `TigerBackpackStrap${side}`,
+        { width: 0.075, height: 0.47, depth: 0.035 },
+        scene
+      );
+      strap.parent = tiger;
+      strap.position.set(side * 0.155, 0.12, 0.318);
+      strap.rotation.z = side * -0.10;
+      strap.material = backpackMat;
+      strap.isPickable = false;
+
+      const brow = MeshBuilder.CreateCapsule(
+        `TigerEyebrow${side}`,
+        { height: 0.14, radius: 0.025, tessellation: 8 },
+        scene
+      );
+      brow.parent = tiger;
+      brow.position.set(side * 0.17, 0.805, 0.405);
+      brow.rotation.z = side * -0.14;
+      brow.material = kidHairMat;
+      brow.isPickable = false;
+    }
+
+    // A tiny golden cat-paw badge gives Tiger's shirt a memorable signature.
+    const shirtBadgeMat = makeMaterial("TigerShirtBadge", new Color3(1, 0.78, 0.16));
+    const pawPad = MeshBuilder.CreateSphere(
+      "TigerShirtPawPad",
+      { diameter: 0.105, segments: 10 },
+      scene
+    );
+    pawPad.parent = tiger;
+    pawPad.position.set(0, 0.10, 0.348);
+    pawPad.scaling.set(1.05, 0.82, 0.32);
+    pawPad.material = shirtBadgeMat;
+    pawPad.isPickable = false;
+    for (const [i, dx] of [-1, 0, 1].entries()) {
+      const toe = MeshBuilder.CreateSphere(
+        `TigerShirtPawToe${i}`,
+        { diameter: 0.043, segments: 8 },
+        scene
+      );
+      toe.parent = tiger;
+      toe.position.set(dx * 0.043, 0.16 + (i === 1 ? 0.015 : 0), 0.35);
+      toe.scaling.z = 0.35;
+      toe.material = shirtBadgeMat;
+      toe.isPickable = false;
+    }
 
     const camera = new ArcRotateCamera(
       "Camera",
@@ -1556,6 +1621,8 @@ export default function Home() {
     let questClaimed = false;
     let lastDamageTime = 0;
     let previousFrameTime = performance.now();
+    let tigerWalkPhase = 0;
+    let tigerMotionBlend = 0;
     let jumpVelocity = 0;
     let isGrounded = true;
 
@@ -2474,6 +2541,52 @@ export default function Home() {
         tiger.position.x = Math.max(-38, Math.min(38, tiger.position.x));
         tiger.position.z = Math.max(-38, Math.min(38, tiger.position.z));
       }
+
+      // Fluid, visible kid locomotion. Blend movement in/out so limbs ease into
+      // a stride instead of snapping, while arms and legs counter-swing naturally.
+      const tigerMoving = buildMode === "none" &&
+        (keys.has("arrowup") || keys.has("w") || keys.has("arrowdown") || keys.has("s") ||
+         keys.has("arrowleft") || keys.has("a") || keys.has("arrowright") || keys.has("d"));
+      const tigerAirborne = !isGrounded;
+      const blendTarget = tigerMoving && !tigerAirborne ? 1 : 0;
+      tigerMotionBlend += (blendTarget - tigerMotionBlend) * Math.min(1, dt * 0.16);
+      tigerWalkPhase += dt * (0.045 + tigerMotionBlend * 0.235);
+      const stride = Math.sin(tigerWalkPhase);
+      const oppositeStride = Math.sin(tigerWalkPhase + Math.PI);
+      const bodyBob = tigerMotionBlend > 0.02
+        ? Math.abs(Math.sin(tigerWalkPhase * 2)) * 0.055 * tigerMotionBlend
+        : Math.sin(now * 0.0021) * 0.012;
+
+      // Only add a grounded bounce; jumping continues to use the existing physics.
+      if (isGrounded) tiger.position.y = 0.8 + bodyBob;
+      tiger.rotation.z = tigerAirborne
+        ? -0.035
+        : stride * 0.035 * tigerMotionBlend;
+
+      tigerArmPivots.forEach((pivot, index) => {
+        const side = index === 0 ? -1 : 1;
+        const armStride = index === 0 ? stride : oppositeStride;
+        const relaxedSway = Math.sin(now * 0.0018 + index * Math.PI) * 0.045;
+        pivot.rotation.x = tigerAirborne
+          ? -0.58
+          : armStride * 0.92 * tigerMotionBlend + relaxedSway * (1 - tigerMotionBlend);
+        pivot.rotation.z = side * (-0.07 + Math.abs(armStride) * 0.055 * tigerMotionBlend);
+      });
+      tigerLegPivots.forEach((pivot, index) => {
+        const side = index === 0 ? -1 : 1;
+        const legStride = index === 0 ? oppositeStride : stride;
+        pivot.rotation.x = tigerAirborne
+          ? (side < 0 ? -0.34 : 0.48)
+          : legStride * 0.72 * tigerMotionBlend;
+        // Lift the foot during the forward part of each step for a readable stride.
+        pivot.position.y = -0.36 + Math.max(0, Math.sin(tigerWalkPhase + (index === 0 ? Math.PI : 0)))
+          * 0.065 * tigerMotionBlend;
+      });
+      tigerHead.rotation.z = tigerAirborne
+        ? 0.045
+        : Math.sin(tigerWalkPhase * 2) * 0.035 * tigerMotionBlend
+          + Math.sin(now * 0.0015) * 0.012 * (1 - tigerMotionBlend);
+      tigerHead.rotation.x = tigerAirborne ? -0.045 : Math.sin(tigerWalkPhase) * 0.018 * tigerMotionBlend;
 
       // Crystal animation and pickup.
       for (const crystal of manaCrystals) {
