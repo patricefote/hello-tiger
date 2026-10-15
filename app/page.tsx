@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import "@babylonjs/loaders/glTF";
 import {
+  AnimationGroup,
   ArcRotateCamera,
   Color3,
   Color4,
@@ -13,6 +15,7 @@ import {
   Mesh,
   MeshBuilder,
   Scene,
+  SceneLoader,
   ShadowGenerator,
   StandardMaterial,
   Texture,
@@ -1078,6 +1081,16 @@ export default function Home() {
     tiger.position.set(0, 0.8, 1);
     tiger.material = blueMat;
 
+    // The invisible gameplay root remains responsible for movement, collision,
+    // camera tracking, pickups, and combat. The downloaded GLB is rendered on a
+    // separate visual root so its own proportions and rig are not distorted by
+    // the old procedural character geometry.
+    const tigerVisualRoot = new TransformNode("TigerImportedVisualRoot", scene);
+    tigerVisualRoot.position.set(tiger.position.x, 0, tiger.position.z);
+    let tigerModelAnimations: AnimationGroup[] = [];
+    let activeTigerAnimation = "";
+    let tigerModelLoaded = false;
+
     // Sculpt the existing movement-root mesh into a more character-like shirt
     // silhouette: slightly broader shoulders, a gently tapered waist, and a
     // little fullness through the middle. The mesh remains the same root, so
@@ -1547,6 +1560,95 @@ export default function Home() {
       }
     });
 
+    // Load the free, locally downloaded character. Keep the procedural Tiger
+    // visible as a fallback until the GLB has loaded successfully.
+    const proceduralTigerMeshes = scene.meshes.filter(
+      (mesh) => mesh === tiger || mesh.name.startsWith("Tiger")
+    );
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "tiger.glb",
+          scene
+        );
+
+        const modelMeshes = imported.meshes.filter(
+          (mesh) => mesh !== tiger && mesh.getTotalVertices() > 0
+        );
+        if (modelMeshes.length === 0) {
+          throw new Error("tiger.glb loaded but did not contain any renderable meshes.");
+        }
+
+        // Measure the downloaded model before parenting it, then fit it to the
+        // existing character's approximate height while keeping its feet on ground.
+        let minY = Number.POSITIVE_INFINITY;
+        let maxY = Number.NEGATIVE_INFINITY;
+        modelMeshes.forEach((mesh) => {
+          mesh.computeWorldMatrix(true);
+          const bounds = mesh.getBoundingInfo().boundingBox;
+          minY = Math.min(minY, bounds.minimumWorld.y);
+          maxY = Math.max(maxY, bounds.maximumWorld.y);
+        });
+        const modelHeight = maxY - minY;
+        if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
+          throw new Error("Could not determine the height of tiger.glb.");
+        }
+        const targetHeight = 1.62;
+        const uniformScale = targetHeight / modelHeight;
+
+        const modelRoot = imported.meshes.find((mesh) => mesh.name === "__root__")
+          ?? imported.meshes.find((mesh) => mesh.parent === null);
+        if (modelRoot) {
+          modelRoot.parent = tigerVisualRoot;
+          modelRoot.scaling.set(uniformScale, uniformScale, uniformScale);
+          modelRoot.position.y += -minY * uniformScale;
+        } else {
+          // Defensive fallback for GLBs that expose multiple top-level meshes.
+          modelMeshes.forEach((mesh) => {
+            if (!mesh.parent) {
+              mesh.parent = tigerVisualRoot;
+              mesh.scaling.scaleInPlace(uniformScale);
+            }
+          });
+          tigerVisualRoot.position.y = -minY * uniformScale;
+        }
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh !== modelRoot && !mesh.parent) mesh.parent = tigerVisualRoot;
+          if (mesh.getTotalVertices() > 0) {
+            mesh.isPickable = false;
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        // Hide only the old character meshes; the gameplay root stays active for
+        // world interactions and the imported model follows it below.
+        proceduralTigerMeshes.forEach((mesh) => {
+          mesh.isVisible = false;
+          mesh.isPickable = false;
+          shadowGenerator.removeShadowCaster(mesh);
+        });
+
+        tigerModelAnimations = imported.animationGroups;
+        tigerModelAnimations.forEach((group) => group.stop());
+        const initialAnimation = tigerModelAnimations.find((group) =>
+          /idle|stand|breath/i.test(group.name)
+        ) ?? tigerModelAnimations[0];
+        if (initialAnimation) {
+          initialAnimation.start(true);
+          activeTigerAnimation = initialAnimation.name;
+        }
+        tigerModelLoaded = true;
+        setMessage("Tiger's 3D model is ready!");
+      } catch (error) {
+        console.error("Could not load /models/tiger.glb. Keeping the built-in Tiger model.", error);
+        setMessage("Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed.");
+      }
+    })();
+
     const camera = new ArcRotateCamera(
       "Camera",
       -Math.PI / 2,
@@ -1950,6 +2052,23 @@ export default function Home() {
     let tigerWalkPhase = 0;
     let tigerMotionBlend = 0;
     let jumpVelocity = 0;
+
+    const switchTigerModelAnimation = (kind: "idle" | "walk" | "run" | "jump") => {
+      if (!tigerModelLoaded || tigerModelAnimations.length === 0) return;
+      const patterns: Record<typeof kind, RegExp[]> = {
+        idle: [/idle/i, /stand/i, /breath/i],
+        walk: [/walk/i, /locomotion/i, /move/i],
+        run: [/run/i, /sprint/i, /jog/i, /walk/i],
+        jump: [/jump/i, /air/i, /fall/i],
+      };
+      const next = tigerModelAnimations.find((group) =>
+        patterns[kind].some((pattern) => pattern.test(group.name))
+      ) ?? tigerModelAnimations[0];
+      if (next.name === activeTigerAnimation) return;
+      tigerModelAnimations.forEach((group) => group.stop());
+      next.start(true);
+      activeTigerAnimation = next.name;
+    };
     let isGrounded = true;
 
     const keys = new Set<string>();
@@ -2914,6 +3033,17 @@ export default function Home() {
           + Math.sin(now * 0.0015) * 0.018 * (1 - tigerMotionBlend);
       tigerHead.rotation.x = tigerAirborne ? -0.075 : Math.sin(tigerWalkPhase) * 0.03 * tigerMotionBlend
         + Math.sin(now * 0.0012) * 0.012 * (1 - tigerMotionBlend);
+
+      // Keep the real 3D model aligned with the invisible gameplay root. The
+      // root's y=0.8 baseline represents standing on the ground.
+      tigerVisualRoot.position.x = tiger.position.x;
+      tigerVisualRoot.position.y = tiger.position.y - 0.8;
+      tigerVisualRoot.position.z = tiger.position.z;
+      tigerVisualRoot.rotation.y = tiger.rotation.y;
+      tigerVisualRoot.rotation.z = tiger.rotation.z;
+      if (tigerAirborne) switchTigerModelAnimation("jump");
+      else if (tigerMoving) switchTigerModelAnimation("walk");
+      else switchTigerModelAnimation("idle");
 
       // Crystal animation and pickup.
       for (const crystal of manaCrystals) {
