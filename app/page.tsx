@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
@@ -1570,7 +1570,7 @@ export default function Home() {
         const imported = await SceneLoader.ImportMeshAsync(
           "",
           "/models/",
-          "mixamo-idle.glb",
+          "tiger-animated.glb",
           scene
         );
 
@@ -1644,7 +1644,7 @@ export default function Home() {
         tigerModelLoaded = true;
         setMessage("Tiger's 3D model is ready!");
       } catch (error) {
-        console.error("Could not load /models/mixamo-idle.glb. Keeping the built-in Tiger model.", error);
+        console.error("Could not load /models/tiger-animated.glb. Keeping the built-in Tiger model.", error);
         setMessage("Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed.");
       }
     })();
@@ -2052,19 +2052,41 @@ export default function Home() {
     let tigerWalkPhase = 0;
     let tigerMotionBlend = 0;
     let jumpVelocity = 0;
+    let idleSeconds = 0;
+    let idleDanceSeconds = 0;
+    let idleDanceDurationSeconds = 0;
+    let nextIdleDanceSeconds = 8 + Math.random() * 10;
+    let tigerIsDancing = false;
 
-    const switchTigerModelAnimation = (kind: "idle" | "walk" | "run" | "jump") => {
+    const switchTigerModelAnimation = (
+      kind: "idle" | "walk" | "run" | "jump" | "dance"
+    ) => {
       if (!tigerModelLoaded || tigerModelAnimations.length === 0) return;
-      const patterns: Record<typeof kind, RegExp[]> = {
-        idle: [/idle/i, /stand/i, /breath/i],
-        walk: [/walk/i, /locomotion/i, /move/i],
-        run: [/run/i, /sprint/i, /jog/i, /walk/i],
-        jump: [/jump/i, /air/i, /fall/i],
+
+      const clipNames: Record<typeof kind, string> = {
+        idle: "Idle_Standing",
+        walk: "Motion_Standard_Walk",
+        run: "Motion_Standing_Sprint_Forward",
+        jump: "Motion_Jump",
+        dance: "Motion_Hip_Hop_Dancing",
       };
-      const next = tigerModelAnimations.find((group) =>
-        patterns[kind].some((pattern) => pattern.test(group.name))
-      ) ?? tigerModelAnimations[0];
-      if (next.name === activeTigerAnimation) return;
+
+      const fallbackPatterns: Record<typeof kind, RegExp[]> = {
+        idle: [/idle/i, /stand/i, /breath/i],
+        walk: [/standard.walk/i, /start.walking/i, /walk/i],
+        run: [/sprint/i, /running/i, /run/i],
+        jump: [/jump/i],
+        dance: [/hip.hop.dancing/i, /danc/i],
+      };
+
+      const next =
+        tigerModelAnimations.find((group) => group.name === clipNames[kind]) ??
+        tigerModelAnimations.find((group) =>
+          fallbackPatterns[kind].some((pattern) => pattern.test(group.name))
+        );
+
+      if (!next || next.name === activeTigerAnimation) return;
+
       tigerModelAnimations.forEach((group) => group.stop());
       next.start(true);
       activeTigerAnimation = next.name;
@@ -2680,7 +2702,7 @@ export default function Home() {
       if (
         [
           "arrowup", "arrowdown", "arrowleft", "arrowright",
-          "w", "a", "s", "d", " "
+          "w", "a", "s", "d", " ", "shift"
         ].includes(key)
       ) {
         keys.add(key);
@@ -2947,7 +2969,8 @@ export default function Home() {
       updateCats(dt, now);
 
       if (buildMode === "none") {
-        const moveSpeed = 0.12 * dt;
+        const sprinting = keys.has("shift");
+        const moveSpeed = (sprinting ? 0.216 : 0.12) * dt;
         let moveX = 0;
         let moveZ = 0;
 
@@ -3039,11 +3062,42 @@ export default function Home() {
       tigerVisualRoot.position.x = tiger.position.x;
       tigerVisualRoot.position.y = tiger.position.y - 0.8;
       tigerVisualRoot.position.z = tiger.position.z;
-      tigerVisualRoot.rotation.y = tiger.rotation.y;
+      tigerVisualRoot.rotation.y = tiger.rotation.y + Math.PI;
       tigerVisualRoot.rotation.z = tiger.rotation.z;
-      if (tigerAirborne) switchTigerModelAnimation("jump");
-      else if (tigerMoving) switchTigerModelAnimation("walk");
-      else switchTigerModelAnimation("idle");
+      if (tigerAirborne) {
+        tigerIsDancing = false;
+        idleSeconds = 0;
+        idleDanceSeconds = 0;
+        nextIdleDanceSeconds = 8 + Math.random() * 10;
+        switchTigerModelAnimation("jump");
+      } else if (tigerMoving) {
+        tigerIsDancing = false;
+        idleSeconds = 0;
+        idleDanceSeconds = 0;
+        nextIdleDanceSeconds = 8 + Math.random() * 10;
+        switchTigerModelAnimation(keys.has("shift") ? "run" : "walk");
+      } else if (tigerIsDancing) {
+        idleDanceSeconds += dt / 60;
+        if (idleDanceSeconds >= idleDanceDurationSeconds) {
+          tigerIsDancing = false;
+          idleSeconds = 0;
+          idleDanceSeconds = 0;
+          nextIdleDanceSeconds = 10 + Math.random() * 16;
+          switchTigerModelAnimation("idle");
+        } else {
+          switchTigerModelAnimation("dance");
+        }
+      } else {
+        idleSeconds += dt / 60;
+        if (idleSeconds >= nextIdleDanceSeconds) {
+          tigerIsDancing = true;
+          idleDanceSeconds = 0;
+          idleDanceDurationSeconds = 6 + Math.random() * 5;
+          switchTigerModelAnimation("dance");
+        } else {
+          switchTigerModelAnimation("idle");
+        }
+      }
 
       // Crystal animation and pickup.
       for (const crystal of manaCrystals) {
