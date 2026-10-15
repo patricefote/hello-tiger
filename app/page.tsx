@@ -907,19 +907,32 @@ ground.receiveShadows = true;
       speed: number;
     }[] = [];
 
-    const treePositions = [
-      [-11, -7], [11, -8], [-12, 5], [11, 3],
-      [-3, -12], [5, -12], [14, 9],
-      [-20, -18], [-29, -12], [-34, 3],
-      [-27, 22], [-15, 30], [-1, 34],
-      [14, 32], [29, 26], [36, 12],
-      [34, -10], [26, -28], [10, -35],
-      [-10, -34], [-28, -28], [-35, -22],
-      [-22, 1], [-17, 13], [-7, 22],
-      [7, 18], [20, 14], [29, 3],
-      [18, -15], [0, -24], [-13, -21],
-    ];
+const treePositions = [
+  // Home area — keep a few trees near spawn
+  [-11, -7], [11, -8], [-12, 5], [11, 3],
+  [-3, -12], [5, -12], [14, 9],
 
+  // Western woodland
+  [-22, -17], [-32, -11], [-39, 3],
+  [-34, 20], [-25, 32], [-12, 39],
+  [-39, -27],
+
+  // Northern woodland
+  [-19, -39], [0, -42], [18, -38],
+  [33, -33], [40, -20],
+
+  // Eastern woodland
+  [39, -7], [41, 10], [36, 27],
+  [25, 38], [9, 41],
+
+  // Southern woodland
+  [-30, 34], [-4, 39], [31, 32],
+  [20, 17], [30, 2], [19, -16],
+
+  // Scattered interior trees
+  [-22, 2], [-17, 14], [-7, 23],
+  [7, 19], [0, -25], [-14, -22],
+];
     treePositions.forEach(([x, z], i) => {
       // Slightly tapered trunks give each tree a more natural silhouette.
       const trunkHeight = 2.1 + (i % 4) * 0.16;
@@ -1770,17 +1783,27 @@ ground.receiveShadows = true;
     camera.attachControl(canvas, true);
     camera.lockedTarget = tiger;
 
-    // Mana crystals throughout the expanded world.
+        // Mana crystals throughout the expanded world.
     const manaCrystals: Mesh[] = [];
     const crystalPositions = [
-      [-4, -2], [4, -4], [-7, 5], [7, -7],
-      [1, -9], [10, 0], [-9, -10], [3, 12],
-      [-16, -14], [-22, -5], [-28, 8], [-18, 20],
-      [-8, 25], [5, 28], [18, 23], [29, 15],
-      [32, 0], [25, -18], [13, -28], [-4, -30],
-      [-20, -27], [30, 29], [-32, 15], [0, 2],
-      [15, 10], [-25, 0], [8, 20], [22, -5],
-    ];
+  // Starter rewards near spawn
+  [-4, -2], [4, -4], [-7, 5],
+
+  // Discoveries along the journey
+  [-17, -14], [-27, -8], [-28, 5],
+  [-33, 21], [-22, 29], [-10, 38],
+  [-12, -38], [0, -42], [17, -37],
+  [31, -32], [40, -19], [40, -5],
+  [39, 13], [31, 29], [17, 39],
+  [2, 35], [-8, 34], [-34, 28],
+  [-39, -23], [-25, -31], [-5, -35],
+  [23, -27], [-22, 2], [-14, 15],
+  [-5, 24], [8, 19], [21, 2], [28, 0],
+
+  // Hidden rewards near the medieval house
+  [62, -12], [88, -22], [112, -21],
+  [87, -8], [98, 1], [84, 0],
+];
 
     crystalPositions.forEach(([x, z], i) => {
       const crystal = MeshBuilder.CreatePolyhedron(
@@ -1794,15 +1817,28 @@ ground.receiveShadows = true;
       manaCrystals.push(crystal);
     });
 
-    // BONUS HEART PICKUPS SCATTERED AROUND THE YARD.
+    // BONUS HEART PICKUPS SCATTERED AROUND THE WORLD.
     // Hearts are collected by walking close to them; each restores one health.
     const heartPickups: HeartPickup[] = [];
     const heartPositions = [
-      [-2, -6], [8, 3], [-11, -5], [4, 10],
-      [-17, -10], [-25, 5], [-19, 23], [-5, 28],
-      [12, 25], [27, 18], [34, 0], [24, -23],
-      [7, -31], [-17, -29], [-31, -18], [0, 18],
-    ];
+  // Starter rewards near spawn
+  [-2, -6], [8, 3],
+
+  // Discoveries along the journey
+  [-19, -15], [-31, -7], [-8, 11],
+  [10, 25], [-14, 36], [-23, -38],
+  [-5, -11], [14, -39], [30, -31],
+  [39, -17], [40, 4], [35, 22],
+  [2, 36], [8, 40], [-13, 34],
+  [-32, 30], [-29, -25], [-24, -33],
+  [4, -34], [25, -25], [-23, 3],
+  [-16, 17], [-6, 25], [7, 21],
+  [22, 13], [29, 1],
+
+  // Hidden health rewards near the medieval house
+  [8, -17], [87, -5], [100, -22],
+  [106, -14], [99, -3],
+];
 
     heartPositions.forEach(([x, z], index) => {
       const parts: Mesh[] = [];
@@ -2084,7 +2120,7 @@ ground.receiveShadows = true;
       }
     })();
 
-    // Resource pickups.
+    // Resource pickups spread across the world for exploration.
     const resources: Resource[] = [];
 
     const createResource = (
@@ -2104,7 +2140,7 @@ ground.receiveShadows = true;
         mesh.position.set(x, 0.38, z);
         mesh.material = woodMat;
       } else {
-        // Low-poly rounded rock instead of a sharp diamond-shaped polyhedron.
+        // Low-poly rounded rock with natural shape variation.
         mesh = MeshBuilder.CreateSphere(
           `StoneResource${index}`,
           { diameter: 1, segments: 24 },
@@ -2129,26 +2165,60 @@ ground.receiveShadows = true;
       resources.push({ type, mesh, x, z, collected: false });
     };
 
+    // WOOD — isolated finds across the main world.
     [
-      [-5, -8], [2, -7], [-9, 3], [8, -5],
-      [1, -11], [12, -3], [-12, -9],
-      [-18, -18], [-26, -12], [-30, 4],
-      [-23, 16], [-14, 26], [-2, 31],
-      [11, 30], [24, 25], [34, 12],
-      [31, -9], [22, -25], [7, -33],
-      [-12, -31], [-29, -24], [18, 5],
-      [-20, 3], [3, 19], [28, -2],
+      // Starting area
+      [-8, -10], [9, 6],
+
+      // Western reaches
+      [-20, -6], [-36, -4], [-25, 37],
+      [-29, 30], [-14, 25], [-1, -31],
+
+      // Northern reaches
+      [-17, -41], [5, -5], [28, -40],
+      [39, -25],
+
+      // Eastern reaches
+      [40, 3], [3, 22], [17, 40],
+      [39, 35],
+
+      // Southern reaches
+      [-36, 13], [-22, 32], [4, 29],
+      [19, 15], [17, -38], [-10, -32],
+      [30, -12], [-25, 1],
+
+      // Medieval house expedition
+      [77, -24], [83, 1], [89, -34],
+      [101, -29], [110, -10], [109, 9],
+      [96, 12], [78, -7],
     ].forEach(([x, z], i) => createResource("wood", x, z, i));
 
+    // STONE — offset from wood to encourage exploring different routes.
     [
-      [-6, -6], [6, 5], [-10, -2], [12, 6],
-      [-2, -13], [9, 11],
-      [-25, -18], [-32, -5], [-24, 12],
-      [-15, 22], [-4, 27], [9, 23],
-      [20, 30], [33, 22], [35, -15],
-      [26, -29], [12, -32], [-7, -25],
-      [-19, -29], [3, 5], [16, -12],
-      [-30, 26], [23, 11], [-13, -16],
+      // Starting area
+      [-2, 18], [2, -12],
+
+      // Western reaches
+      [-30, -37], [-4, -16], [-38, 6],
+      [-29, 27], [-5, 20], [-39, -37],
+
+      // Northern reaches
+      [-31, -40], [-4, -43], [17, -32],
+      [36, -37],
+
+      // Eastern reaches
+      [35, -5], [24, 51], [5, 38],
+      [41, 17],
+
+      // Southern reaches
+      [-9, 20], [-35, 27], [13, 23],
+      [22, 5], [32, -24], [-4, -35],
+      [38, -16], [-18, 14],
+
+      // Medieval house expedition
+      [81, -4], [91, 3], [96, -37],
+      [117, -25], [14, -2], [12, 17],
+      [87, -30], [76, 20],
     ].forEach(([x, z], i) => createResource("stone", x, z, i));
 
     // Milo.
