@@ -18,6 +18,8 @@ import {
   Texture,
   TransformNode,
   Vector3,
+  VertexBuffer,
+  VertexData,
 } from "@babylonjs/core";
 
 type Cat = {
@@ -1070,33 +1072,101 @@ export default function Home() {
     // The main body remains the movement/collision root used by the game.
     const tiger = MeshBuilder.CreateCapsule(
       "Tiger",
-      { height: 1.08, radius: 0.34, tessellation: 16 },
+      { height: 1.08, radius: 0.34, tessellation: 16, updatable: true },
       scene
     );
     tiger.position.set(0, 0.8, 1);
     tiger.material = blueMat;
+
+    // Sculpt the existing movement-root mesh into a more character-like shirt
+    // silhouette: slightly broader shoulders, a gently tapered waist, and a
+    // little fullness through the middle. The mesh remains the same root, so
+    // movement, jumping, and every gameplay reference stay intact.
+    const torsoPositions = tiger.getVerticesData(VertexBuffer.PositionKind);
+    const torsoIndices = tiger.getIndices();
+    if (torsoPositions && torsoIndices) {
+      for (let i = 0; i < torsoPositions.length; i += 3) {
+        const x = torsoPositions[i];
+        const y = torsoPositions[i + 1];
+        const z = torsoPositions[i + 2];
+        const height = Math.max(-1, Math.min(1, y / 0.54));
+        const shoulder = Math.max(0, height) * 0.12;
+        const waistTaper = Math.max(0, Math.min(1, (-height + 0.05) / 0.95));
+        const belly = Math.exp(-Math.pow((height + 0.12) / 0.34, 2)) * 0.025;
+        const widthFactor = 1 + shoulder - waistTaper * 0.10 + belly;
+        torsoPositions[i] = x * widthFactor;
+        torsoPositions[i + 2] = z * (widthFactor + 0.015);
+      }
+      tiger.updateVerticesData(VertexBuffer.PositionKind, torsoPositions);
+      const torsoNormals: number[] = [];
+      VertexData.ComputeNormals(torsoPositions, torsoIndices, torsoNormals);
+      tiger.updateVerticesData(VertexBuffer.NormalKind, torsoNormals);
+      tiger.refreshBoundingInfo();
+    }
     shadowGenerator.addShadowCaster(tiger);
 
     const tigerHead = MeshBuilder.CreateSphere(
       "TigerHead",
-      { diameter: 0.78, segments: 20 },
+      { diameter: 0.82, segments: 32, updatable: true },
       scene
     );
     tigerHead.parent = tiger;
     tigerHead.position.set(0, 0.68, 0.035);
     tigerHead.material = kidSkinMat;
+
+    // Reshape the sphere into a soft cartoon head: a broader forehead, a
+    // narrower jaw, and gently fuller cheeks. This changes the actual mesh,
+    // rather than merely adding more little decorative spheres.
+    const headPositions = tigerHead.getVerticesData(VertexBuffer.PositionKind);
+    const headIndices = tigerHead.getIndices();
+    if (headPositions && headIndices) {
+      for (let i = 0; i < headPositions.length; i += 3) {
+        const x = headPositions[i];
+        const y = headPositions[i + 1];
+        const z = headPositions[i + 2];
+        const normalizedY = y / 0.41;
+        const jawTaper = Math.max(0, Math.min(1, (-normalizedY - 0.02) / 0.82));
+        const forehead = Math.max(0, normalizedY) * 0.035;
+        const cheekZone = Math.exp(-Math.pow((Math.abs(x) - 0.19) / 0.105, 2))
+          * Math.exp(-Math.pow((y + 0.095) / 0.14, 2))
+          * Math.max(0, z / 0.41);
+        headPositions[i] = x * (1 - jawTaper * 0.13 + forehead);
+        headPositions[i + 2] = z + cheekZone * 0.035;
+      }
+      tigerHead.updateVerticesData(VertexBuffer.PositionKind, headPositions);
+      const headNormals: number[] = [];
+      VertexData.ComputeNormals(headPositions, headIndices, headNormals);
+      tigerHead.updateVerticesData(VertexBuffer.NormalKind, headNormals);
+      tigerHead.refreshBoundingInfo();
+    }
     shadowGenerator.addShadowCaster(tigerHead);
 
     // Close-cropped base with a defined high-top silhouette.
     const tigerHair = MeshBuilder.CreateSphere(
       "TigerHairCap",
-      { diameter: 0.78, segments: 16 },
+      { diameter: 0.78, segments: 16, updatable: true },
       scene
     );
     tigerHair.parent = tiger;
     tigerHair.position.set(0, 0.91, -0.015);
-    tigerHair.scaling.set(1.02, 0.48, 0.92);
+    tigerHair.scaling.set(1.04, 0.49, 0.94);
     tigerHair.material = kidHairMat;
+
+    const hairCapPositions = tigerHair.getVerticesData(VertexBuffer.PositionKind);
+    const hairCapIndices = tigerHair.getIndices();
+    if (hairCapPositions && hairCapIndices) {
+      for (let i = 0; i < hairCapPositions.length; i += 3) {
+        const y = hairCapPositions[i + 1] / 0.39;
+        const topTaper = Math.max(0, y) * 0.055;
+        hairCapPositions[i] *= 1 - topTaper;
+        hairCapPositions[i + 2] *= 1 - topTaper * 0.7;
+      }
+      tigerHair.updateVerticesData(VertexBuffer.PositionKind, hairCapPositions);
+      const hairNormals: number[] = [];
+      VertexData.ComputeNormals(hairCapPositions, hairCapIndices, hairNormals);
+      tigerHair.updateVerticesData(VertexBuffer.NormalKind, hairNormals);
+      tigerHair.refreshBoundingInfo();
+    }
 
     // A short, squared-off high-top sits above the close-cropped sides.
     const tigerHighTop = MeshBuilder.CreateCylinder(
@@ -1167,6 +1237,17 @@ export default function Home() {
       arm.rotation.z = side * -0.12;
       arm.material = blueMat;
       shadowGenerator.addShadowCaster(arm);
+
+      const sleeveCuff = MeshBuilder.CreateCapsule(
+        `TigerSleeveCuff${side}`,
+        { height: 0.15, radius: 0.11, tessellation: 12 },
+        scene
+      );
+      sleeveCuff.parent = armPivot;
+      sleeveCuff.position.set(side * 0.055, -0.39, 0.006);
+      sleeveCuff.scaling.set(1.0, 0.58, 1.0);
+      sleeveCuff.material = kidShirtTrimMat;
+      sleeveCuff.isPickable = false;
 
       const hand = MeshBuilder.CreateSphere(
         `TigerHand${side}`,
