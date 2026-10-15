@@ -756,8 +756,12 @@ export default function Home() {
       mesh: Mesh;
       baseRotationX: number;
       baseRotationZ: number;
+      basePositionX: number;
+      basePositionY: number;
+      basePositionZ: number;
       phase: number;
       amplitude: number;
+      positionAmplitude: number;
       speed: number;
     }[] = [];
 
@@ -871,9 +875,13 @@ export default function Home() {
           mesh: leaves,
           baseRotationX: leaves.rotation.x,
           baseRotationZ: leaves.rotation.z,
+          basePositionX: leaves.position.x,
+          basePositionY: leaves.position.y,
+          basePositionZ: leaves.position.z,
           phase: i * 0.71 + j * 0.93,
-          amplitude: 0.018 + ((i + j) % 3) * 0.006,
-          speed: 0.00048 + ((i + j) % 4) * 0.000045,
+          amplitude: 0.075 + ((i + j) % 3) * 0.022,
+          positionAmplitude: 0.075 + ((i + j) % 3) * 0.018,
+          speed: 0.00072 + ((i + j) % 4) * 0.00007,
         });
         shadowGenerator.addShadowCaster(leaves);
       });
@@ -937,9 +945,13 @@ export default function Home() {
           mesh,
           baseRotationX: mesh.rotation.x,
           baseRotationZ: mesh.rotation.z,
+          basePositionX: mesh.position.x,
+          basePositionY: mesh.position.y,
+          basePositionZ: mesh.position.z,
           phase: i * 0.83 + blade * 1.37,
-          amplitude: 0.075 + ((i + blade) % 3) * 0.018,
-          speed: 0.0011 + (blade % 2) * 0.00015,
+          amplitude: 0.18 + ((i + blade) % 3) * 0.035,
+          positionAmplitude: 0.025 + ((i + blade) % 3) * 0.008,
+          speed: 0.00135 + (blade % 2) * 0.0002,
         });
         mesh.isPickable = false;
         mesh.receiveShadows = false;
@@ -2578,44 +2590,45 @@ export default function Home() {
          keys.has("arrowleft") || keys.has("a") || keys.has("arrowright") || keys.has("d"));
       const tigerAirborne = !isGrounded;
       const blendTarget = tigerMoving && !tigerAirborne ? 1 : 0;
-      tigerMotionBlend += (blendTarget - tigerMotionBlend) * Math.min(1, dt * 0.16);
-      tigerWalkPhase += dt * (0.045 + tigerMotionBlend * 0.235);
+      tigerMotionBlend += (blendTarget - tigerMotionBlend) * Math.min(1, dt * 0.22);
+      tigerWalkPhase += dt * (0.045 + tigerMotionBlend * 0.255);
       const stride = Math.sin(tigerWalkPhase);
       const oppositeStride = Math.sin(tigerWalkPhase + Math.PI);
       const bodyBob = tigerMotionBlend > 0.02
-        ? Math.abs(Math.sin(tigerWalkPhase * 2)) * 0.055 * tigerMotionBlend
-        : Math.sin(now * 0.0021) * 0.012;
+        ? Math.abs(Math.sin(tigerWalkPhase * 2)) * 0.075 * tigerMotionBlend
+        : Math.sin(now * 0.0021) * 0.018;
 
       // Only add a grounded bounce; jumping continues to use the existing physics.
       if (isGrounded) tiger.position.y = 0.8 + bodyBob;
       tiger.rotation.z = tigerAirborne
-        ? -0.035
-        : stride * 0.035 * tigerMotionBlend;
+        ? -0.055
+        : stride * 0.065 * tigerMotionBlend;
 
       tigerArmPivots.forEach((pivot, index) => {
         const side = index === 0 ? -1 : 1;
         const armStride = index === 0 ? stride : oppositeStride;
         const relaxedSway = Math.sin(now * 0.0018 + index * Math.PI) * 0.045;
         pivot.rotation.x = tigerAirborne
-          ? -0.58
-          : armStride * 0.92 * tigerMotionBlend + relaxedSway * (1 - tigerMotionBlend);
-        pivot.rotation.z = side * (-0.07 + Math.abs(armStride) * 0.055 * tigerMotionBlend);
+          ? -0.72
+          : armStride * 1.08 * tigerMotionBlend + relaxedSway * (1 - tigerMotionBlend);
+        pivot.rotation.z = side * (-0.09 + Math.abs(armStride) * 0.075 * tigerMotionBlend);
       });
       tigerLegPivots.forEach((pivot, index) => {
         const side = index === 0 ? -1 : 1;
         const legStride = index === 0 ? oppositeStride : stride;
         pivot.rotation.x = tigerAirborne
           ? (side < 0 ? -0.34 : 0.48)
-          : legStride * 0.72 * tigerMotionBlend;
-        // Lift the foot during the forward part of each step for a readable stride.
+          : legStride * 0.86 * tigerMotionBlend;
+        // Lift each foot clearly during its forward swing for a readable stride.
         pivot.position.y = -0.36 + Math.max(0, Math.sin(tigerWalkPhase + (index === 0 ? Math.PI : 0)))
-          * 0.065 * tigerMotionBlend;
+          * 0.105 * tigerMotionBlend;
       });
       tigerHead.rotation.z = tigerAirborne
         ? 0.045
-        : Math.sin(tigerWalkPhase * 2) * 0.035 * tigerMotionBlend
-          + Math.sin(now * 0.0015) * 0.012 * (1 - tigerMotionBlend);
-      tigerHead.rotation.x = tigerAirborne ? -0.045 : Math.sin(tigerWalkPhase) * 0.018 * tigerMotionBlend;
+        : Math.sin(tigerWalkPhase * 2) * 0.055 * tigerMotionBlend
+          + Math.sin(now * 0.0015) * 0.018 * (1 - tigerMotionBlend);
+      tigerHead.rotation.x = tigerAirborne ? -0.075 : Math.sin(tigerWalkPhase) * 0.03 * tigerMotionBlend
+        + Math.sin(now * 0.0012) * 0.012 * (1 - tigerMotionBlend);
 
       // Crystal animation and pickup.
       for (const crystal of manaCrystals) {
@@ -2876,9 +2889,13 @@ export default function Home() {
       windSwayMeshes.forEach((item) => {
         const breeze = Math.sin(now * item.speed + item.phase);
         const secondaryBreeze = Math.sin(now * item.speed * 0.63 + item.phase * 1.7);
-        item.mesh.rotation.x = item.baseRotationX + breeze * item.amplitude * 0.38;
+        // Both rotation and small positional drift make the breeze readable at game distance.
+        item.mesh.rotation.x = item.baseRotationX + breeze * item.amplitude * 0.32;
         item.mesh.rotation.z = item.baseRotationZ + breeze * item.amplitude
-          + secondaryBreeze * item.amplitude * 0.24;
+          + secondaryBreeze * item.amplitude * 0.28;
+        item.mesh.position.x = item.basePositionX + breeze * item.positionAmplitude;
+        item.mesh.position.y = item.basePositionY + Math.abs(secondaryBreeze) * item.positionAmplitude * 0.16;
+        item.mesh.position.z = item.basePositionZ + secondaryBreeze * item.positionAmplitude * 0.6;
       });
 
       // Clouds drift slowly and bob just a little, keeping the sky lively but calm.
