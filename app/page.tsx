@@ -1,5 +1,8 @@
 ﻿"use client";
 
+let rusticTimberMat: Material | null = null;
+let weatheredPlanksMat: Material | null = null;
+
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
 import {
@@ -12,6 +15,7 @@ import {
   Engine,
   HemisphericLight,
   ImageProcessingConfiguration,
+  Material,
   Mesh,
   MeshBuilder,
   Scene,
@@ -622,6 +626,42 @@ ground.receiveShadows = true;
             houseRoot.name = "MedievalCountrysideHouseRoot";
             houseRoot.position.set(94, 0, -12);
             houseRoot.scaling.setAll(2.5);
+
+          
+// HELLO TIGER! — Imported Material Library
+const findImportedMaterial = (name: string) =>
+  scene.materials.find((mat) => mat.name === name) ?? null;
+
+rusticTimberMat = findImportedMaterial("wood_01");
+weatheredPlanksMat = findImportedMaterial("wood_planks_09");
+
+console.log("HELLO TIGER! MATERIAL LIBRARY", {
+  rusticTimber: rusticTimberMat?.name ?? "Fallback required",
+  weatheredPlanks: weatheredPlanksMat?.name ?? "Fallback required",
+});
+
+console.log(
+  "HOUSE MESHES — SORTED BY SIZE",
+  imported.meshes
+    .filter((mesh) => mesh.getTotalVertices() > 0)
+    .map((mesh) => {
+      const bounds = mesh.getBoundingInfo().boundingBox;
+
+      return {
+        name: mesh.name,
+        material: mesh.material?.name ?? "(none)",
+        sizeX: Number((bounds.extendSize.x * 2).toFixed(2)),
+        sizeY: Number((bounds.extendSize.y * 2).toFixed(2)),
+        sizeZ: Number((bounds.extendSize.z * 2).toFixed(2)),
+        center: bounds.center.asArray().map((n) => Number(n.toFixed(2))),
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.sizeX * b.sizeY * b.sizeZ -
+        a.sizeX * a.sizeY * a.sizeZ
+    )
+);
 
             imported.meshes.forEach((mesh) => {
               // Hide the imported sand ground plane.
@@ -2122,7 +2162,6 @@ const treePositions = [
 
     // Resource pickups spread across the world for exploration.
     const resources: Resource[] = [];
-
     const createResource = (
       type: "wood" | "stone",
       x: number,
@@ -2132,26 +2171,69 @@ const treePositions = [
       let mesh: Mesh;
 
       if (type === "wood") {
+        // One invisible gameplay root keeps the existing pickup logic intact.
         mesh = MeshBuilder.CreateBox(
           `WoodResource${index}`,
-          { width: 0.85, height: 0.65, depth: 0.85 },
+          { width: 1.15, height: 0.75, depth: 0.9 },
           scene
         );
         mesh.position.set(x, 0.38, z);
-        mesh.material = woodMat;
+        mesh.isVisible = false;
+        mesh.isPickable = false;
+
+        const logMaterial: Material = rusticTimberMat ?? woodMat;
+
+        // Three chunky, horizontal logs arranged in a compact stack.
+        const logSpecs = [
+          { x: -0.12, y: 0.19, z: -0.2, rotation: 0 },
+          { x: 0.12, y: 0.19, z: 0.2, rotation: 0 },
+          { x: 0, y: 0.46, z: 0, rotation: Math.PI / 2 },
+        ];
+
+        logSpecs.forEach((spec, logIndex) => {
+          const log = MeshBuilder.CreateCylinder(
+            `WoodResource${index}Log${logIndex}`,
+            {
+              height: 0.8,
+              diameter: 0.3,
+              tessellation: 12,
+            },
+            scene
+          );
+
+          // Cylinders run along their local Y axis by default.
+          log.rotation.z = Math.PI / 2;
+          log.rotation.y = spec.rotation;
+          log.position.set(
+            x + spec.x,
+            spec.y,
+            z + spec.z
+          );
+          log.material = logMaterial;
+          log.isPickable = false;
+          log.receiveShadows = true;
+          shadowGenerator.addShadowCaster(log);
+
+          // Parent the visible logs to the resource root so hiding the
+          // resource on collection hides every log in the stack.
+          log.parent = mesh;
+          log.position.set(spec.x, spec.y - 0.38, spec.z);
+        });
       } else {
-        // Low-poly rounded rock with natural shape variation.
+        // Keep the existing low-poly rounded rock.
         mesh = MeshBuilder.CreateSphere(
           `StoneResource${index}`,
           { diameter: 1, segments: 24 },
           scene
         );
+
         const variation = 0.82 + Math.random() * 0.3;
         mesh.scaling.set(
           variation * (0.9 + Math.random() * 0.25),
           variation * (0.7 + Math.random() * 0.25),
           variation * (0.85 + Math.random() * 0.3)
         );
+
         mesh.position.set(x, 0.34, z);
         mesh.rotation.set(
           (Math.random() - 0.5) * 0.35,
@@ -2307,6 +2389,122 @@ const treePositions = [
 
     const projectiles: Projectile[] = [];
 
+// TIGER'S LIGHTNING MAGIC ⚡
+// Build a jagged lightning bolt from connected, emissive segments.
+const createLightningBolt = (
+  name: string,
+  length = 1.35,
+  width = 0.48
+): Mesh => {
+  const bolt = MeshBuilder.CreateBox(
+    name,
+    { width: 0.01, height: 0.01, depth: 0.01 },
+    scene
+  );
+
+  bolt.isPickable = false;
+  bolt.isVisible = false;
+
+  const segments = [
+    {
+      x1: width * 0.08,
+      y1: length * 0.5,
+      x2: -width * 0.08,
+      y2: length * 0.13,
+      thickness: width * 0.19,
+    },
+    {
+      x1: -width * 0.08,
+      y1: length * 0.13,
+      x2: width * 0.48,
+      y2: length * 0.13,
+      thickness: width * 0.19,
+    },
+    {
+      x1: width * 0.48,
+      y1: length * 0.13,
+      x2: -width * 0.12,
+      y2: -length * 0.12,
+      thickness: width * 0.19,
+    },
+    {
+      x1: -width * 0.12,
+      y1: -length * 0.12,
+      x2: width * 0.12,
+      y2: -length * 0.12,
+      thickness: width * 0.19,
+    },
+    {
+      x1: width * 0.12,
+      y1: -length * 0.12,
+      x2: -width * 0.42,
+      y2: -length * 0.5,
+      thickness: width * 0.19,
+    },
+  ];
+
+  segments.forEach((segment, index) => {
+    const start = new Vector3(segment.x1, segment.y1, 0);
+    const end = new Vector3(segment.x2, segment.y2, 0);
+    const direction = end.subtract(start);
+    const midpoint = start.add(end).scale(0.5);
+
+    const piece = MeshBuilder.CreateBox(
+      `${name}Segment${index}`,
+      {
+        width: segment.thickness,
+        height: direction.length() + segment.thickness * 0.45,
+        depth: 0.055,
+      },
+      scene
+    );
+
+    piece.position.copyFrom(midpoint);
+    piece.rotation.z = -Math.atan2(direction.x, direction.y);
+    piece.parent = bolt;
+    piece.isPickable = false;
+  });
+
+  return bolt;
+};
+
+// Bright electric core.
+const lightningCoreMat = new StandardMaterial(
+  "LightningCoreMaterial",
+  scene
+);
+lightningCoreMat.diffuseColor = new Color3(0.75, 0.95, 1);
+lightningCoreMat.emissiveColor = new Color3(0.25, 0.8, 1);
+lightningCoreMat.specularColor = new Color3(1, 1, 1);
+lightningCoreMat.disableLighting = true;
+
+// Electric-blue aura.
+const lightningAuraMat = new StandardMaterial(
+  "LightningAuraMaterial",
+  scene
+);
+lightningAuraMat.diffuseColor = new Color3(0.15, 0.45, 1);
+lightningAuraMat.emissiveColor = new Color3(0.08, 0.25, 1);
+lightningAuraMat.alpha = 0.42;
+lightningAuraMat.disableLighting = true;
+
+// Build a complete bolt with a blue aura and bright inner core.
+const createLightningProjectileVisual = (name: string) => {
+  const aura = createLightningBolt(`${name}Aura`, 1.65, 0.68);
+  aura.material = lightningAuraMat;
+  aura.isVisible = true;
+  aura.isPickable = false;
+
+  const core = createLightningBolt(`${name}Core`, 1.35, 0.48);
+  core.material = lightningCoreMat;
+  core.parent = aura;
+  core.position.set(0, 0, -0.06);
+  core.isVisible = true;
+  core.isPickable = false;
+
+  return aura;
+};
+
     let buildX = 0;
     let buildZ = 0;
     let barnRotation = 0;
@@ -2331,7 +2529,6 @@ const treePositions = [
     let nextIdleDanceSeconds = 8 + Math.random() * 10;
     let tigerIsDancing = false;
 
-    
     let tigerIsCasting = false;
     let tigerCastSecondsRemaining = 0;
 
@@ -2396,7 +2593,13 @@ const treePositions = [
       keys.clear();
     };
 
-    // Barn layout uses a clear front opening so housed cats can be seen.
+  
+    // HELLO TIGER! — Reusable Imported Material Library
+    // Declare these ONCE outside this barn section, in the shared scope:
+    // let rusticTimberMat: Material | null = null;
+    // let weatheredPlanksMat: Material | null = null;
+
+    // Barn layout: open front keeps the cats visible.
     const barnLocalPositions = [
       [0, 0],
       [0, 1.6],
@@ -2416,41 +2619,98 @@ const treePositions = [
       x: number,
       y: number,
       z: number,
-      mat: StandardMaterial,
+      mat: Material,
       rotationZ = 0
-    ) => {
+    ): Mesh => {
       const mesh = MeshBuilder.CreateBox(
         name,
         { width, height, depth },
         scene
       );
+
       mesh.position.set(x, y, z);
       mesh.rotation.z = rotationZ;
       mesh.material = mat;
       mesh.isPickable = false;
+
       return mesh;
     };
 
     const createBarnParts = (
       prefix: string,
-      material: StandardMaterial,
-      roofMaterial: StandardMaterial
+      wallMaterial: Material,
+      roofMaterial: Material,
+      frameMaterial: Material = wallMaterial
     ): Mesh[] => [
-      addBarnPart(`${prefix}Floor`, 4, 0.18, 3.4, 0, 0.13, 0, material),
-      addBarnPart(`${prefix}BackWall`, 4, 2.4, 0.18, 0, 1.4, 1.6, material),
-      addBarnPart(`${prefix}LeftWall`, 0.18, 2.4, 3.4, -1.9, 1.4, 0, material),
-      addBarnPart(`${prefix}RightWall`, 0.18, 2.4, 3.4, 1.9, 1.4, 0, material),
-      addBarnPart(`${prefix}FrontLeft`, 1.25, 2.4, 0.18, -1.35, 1.4, -1.6, material),
-      addBarnPart(`${prefix}FrontRight`, 1.25, 2.4, 0.18, 1.35, 1.4, -1.6, material),
-      addBarnPart(`${prefix}RoofLeft`, 2.35, 0.22, 3.8, -0.92, 2.75, 0, roofMaterial, -0.48),
-      addBarnPart(`${prefix}RoofRight`, 2.35, 0.22, 3.8, 0.92, 2.75, 0, roofMaterial, 0.48),
+      // Floor
+      addBarnPart(
+        `${prefix}Floor`,
+        4, 0.18, 3.4,
+        0, 0.13, 0,
+        wallMaterial
+      ),
+
+      // Back wall
+      addBarnPart(
+        `${prefix}BackWall`,
+        4, 2.4, 0.18,
+        0, 1.4, 1.6,
+        wallMaterial
+      ),
+
+      // Side walls
+      addBarnPart(
+        `${prefix}LeftWall`,
+        0.18, 2.4, 3.4,
+        -1.9, 1.4, 0,
+        wallMaterial
+      ),
+      addBarnPart(
+        `${prefix}RightWall`,
+        0.18, 2.4, 3.4,
+        1.9, 1.4, 0,
+        wallMaterial
+      ),
+
+      // Split front — central doorway remains open
+      addBarnPart(
+        `${prefix}FrontLeft`,
+        1.25, 2.4, 0.18,
+        -1.35, 1.4, -1.6,
+        wallMaterial
+      ),
+      addBarnPart(
+        `${prefix}FrontRight`,
+        1.25, 2.4, 0.18,
+        1.35, 1.4, -1.6,
+        wallMaterial
+      ),
+
+      // Pitched roof
+      addBarnPart(
+        `${prefix}RoofLeft`,
+        2.35, 0.22, 3.8,
+        -0.92, 2.75, 0,
+        roofMaterial,
+        0.48
+      ),
+      addBarnPart(
+        `${prefix}RoofRight`,
+        2.35, 0.22, 3.8,
+        0.92, 2.75, 0,
+        roofMaterial,
+        -0.48
+      ),
     ];
 
+    // Ghost preview — keep all eight pieces in the same order.
     const ghostParts = createBarnParts(
       "GhostBarn",
       ghostMat,
+      ghostMat,
       ghostMat
     );
+
     ghostParts.forEach((part) => part.setEnabled(false));
 
     const placeParts = (
@@ -2465,19 +2725,27 @@ const treePositions = [
         const [localX, localZ] = barnLocalPositions[index];
 
         part.position.x =
-          x + localX * Math.cos(radians) -
+          x +
+          localX * Math.cos(radians) -
           localZ * Math.sin(radians);
+
         part.position.z =
-          z + localX * Math.sin(radians) +
+          z +
+          localX * Math.sin(radians) +
           localZ * Math.cos(radians);
 
-        const slope = index === 6 ? -0.48 : index === 7 ? 0.48 : 0;
+        const slope =
+          index === 6 ? 0.48 :
+          index === 7 ? -0.48 :
+          0;
+
         part.rotation.set(0, radians, slope);
       });
     };
 
     const updateBarnPreview = () => {
       placeParts(ghostParts, buildX, buildZ, barnRotation);
+      ghostParts.forEach((part) => part.setEnabled(true));
     };
 
     const makeBarn = (
@@ -2486,27 +2754,43 @@ const treePositions = [
       rotation: number,
       index: number
     ): Barn => {
+const wallMaterial: Material = weatheredPlanksMat ?? barnRedMat;
+const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
+
       const parts = createBarnParts(
         `BuiltBarn${index}`,
-        barnRedMat,
-        roofWoodMat
+        wallMaterial,
+        roofWoodMat,
+        frameMaterial
       );
+
       placeParts(parts, x, z, rotation);
 
-      // Six warm straw pads make each rescued cat's spot easy to see through the open front.
+      // Six warm straw pads make each rescued cat's spot easy to see
+      // through the barn's open front.
       const catSlots = [
-        [-0.85, -0.62], [0, -0.62], [0.85, -0.62],
-        [-0.85, 0.45], [0, 0.45], [0.85, 0.45],
+        [-0.85, -0.62],
+        [0, -0.62],
+        [0.85, -0.62],
+        [-0.85, 0.45],
+        [0, 0.45],
+        [0.85, 0.45],
       ];
+
       const radians = (rotation * Math.PI) / 180;
+
       catSlots.forEach(([localX, localZ], slotIndex) => {
-        const worldX = x + localX * Math.cos(radians) - localZ * Math.sin(radians);
-        const worldZ = z + localX * Math.sin(radians) + localZ * Math.cos(radians);
+        const worldX =
+          x + localX * Math.cos(radians) - localZ * Math.sin(radians);
+        const worldZ =
+          z + localX * Math.sin(radians) + localZ * Math.cos(radians);
+
         const bed = MeshBuilder.CreateCylinder(
           `Barn${index}CatBed${slotIndex}`,
           { height: 0.07, diameter: 0.82, tessellation: 24 },
           scene
         );
+
         bed.position.set(worldX, 0.26, worldZ);
         bed.rotation.y = radians;
         bed.material = hayMat;
@@ -2518,13 +2802,21 @@ const treePositions = [
           { height: 0.09, diameter: 0.24, tessellation: 20 },
           scene
         );
-        bowl.position.set(worldX + Math.cos(radians) * 0.28, 0.31, worldZ + Math.sin(radians) * 0.28);
+
+        bowl.position.set(
+          worldX + Math.cos(radians) * 0.28,
+          0.31,
+          worldZ + Math.sin(radians) * 0.28
+        );
+
         bowl.material = bowlMat;
         bowl.isPickable = false;
         parts.push(bowl);
       });
 
+      // Register the barn, cat beds, and bowls as shadow casters.
       parts.forEach((part) => shadowGenerator.addShadowCaster(part));
+
       return { x, z, rotation, parts };
     };
 
@@ -2687,10 +2979,10 @@ const treePositions = [
         return count < slots.length;
       });
 
-      if (barnIndex < 0) {
-        <p>B - Build another barn (5 wood + 3 stone)</p>
-        return;
-      }
+  if (barnIndex < 0) {
+  setMessage("All barns are full! Build another barn to house more cats.");
+  return;
+}
 
       const barn = barns[barnIndex];
       const housedInBarn = cats.filter(
@@ -2744,6 +3036,7 @@ const treePositions = [
         setMessage("You need 1 mana to cast a magic bolt. Find a blue crystal!");
         return;
       }
+
       switchTigerModelAnimation("cast");
       manaCount -= 1;
       setMana(manaCount);
@@ -2751,18 +3044,32 @@ const treePositions = [
       const dx = Math.sin(tiger.rotation.y);
       const dz = Math.cos(tiger.rotation.y);
 
-      const projectile = MeshBuilder.CreateSphere(
+      const projectile = MeshBuilder.CreateBox(
         `MagicBolt${performance.now()}`,
-        { diameter: 0.38, segments: 20 },
+        { width: 0.16, height: 0.72, depth: 0.16 },
         scene
       );
+
+      const boltMaterial = new StandardMaterial(
+        `MagicBoltMaterial${performance.now()}`,
+        scene
+      );
+
+      boltMaterial.diffuseColor = new Color3(0.35, 0.85, 1);
+      boltMaterial.emissiveColor = new Color3(0.15, 0.65, 1);
+      boltMaterial.disableLighting = true;
+
+      projectile.material = boltMaterial;
+      projectile.isPickable = false;
+
       projectile.position.set(
         tiger.position.x + dx * 0.85,
         1.05,
         tiger.position.z + dz * 0.85
       );
-      projectile.material = magicMat;
-      projectile.isPickable = false;
+
+      // Keep the bolt upright and visible while it travels forward.
+      projectile.rotation.z = 0;
 
       projectiles.push({
         mesh: projectile,
@@ -3791,7 +4098,6 @@ const treePositions = [
           </div>
         )}
 
-       ```tsx
 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
   <div className="rounded-xl bg-white/10 px-3 py-2">
     <div className="text-xs text-slate-300">Tiger health</div>
