@@ -1884,474 +1884,562 @@ if (modelRoot) {
 tigerModelAnimations = imported.animationGroups;
 tigerModelAnimations.forEach((group) => group.stop());
 
-// Prefer a genuine idle animation rather than blindly playing the first clip.
-const initialAnimation =
-  tigerModelAnimations.find((group) =>
-    /idle|stand|breath/i.test(group.name)
-  );
 
-activeTigerAnimation = "";
+      // Prefer a genuine idle animation rather than blindly playing the first clip.
+      const initialAnimation = tigerModelAnimations.find((group) =>
+        /idle|stand|breath/i.test(group.name)
+      );
 
-tigerModelLoaded = true;
+      activeTigerAnimation = "";
+      tigerModelLoaded = true;
 
-if (initialAnimation) {
-  initialAnimation.start(true);
-  activeTigerAnimation = initialAnimation.name;
-} else {
-  console.warn(
-    "No idle animation found for Tiger. Available animations:",
-    tigerModelAnimations.map((group) => group.name)
-  );
-}
-
-setMessage("Tiger's 3D model is ready!");
-
-      } catch (error) {
-        console.error("Could not load /models/tiger-animated.glb. Keeping the built-in Tiger model.", error);
-        setMessage("Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed.");
+      if (initialAnimation) {
+        initialAnimation.start(true);
+        activeTigerAnimation = initialAnimation.name;
+      } else {
+        console.warn(
+          "No idle animation found for Tiger. Available animations:",
+          tigerModelAnimations.map((group) => group.name)
+        );
       }
-    })();
 
-    const camera = new ArcRotateCamera(
-      "Camera",
-      -Math.PI / 2,
-      Math.PI / 3,
-      16,
-      tiger.position.clone(),
+      setMessage("Tiger's 3D model is ready!");
+    } catch (error) {
+      console.error(
+        "Could not load /models/tiger-animated.glb. Keeping the built-in Tiger model.",
+        error
+      );
+      setMessage(
+        "Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed."
+      );
+    }
+  })();
+
+  const camera = new ArcRotateCamera(
+    "Camera",
+    -Math.PI / 2,
+    Math.PI / 3,
+    16,
+    tiger.position.clone(),
+    scene
+  );
+
+  camera.lowerRadiusLimit = 7;
+  camera.upperRadiusLimit = 50;
+  camera.lowerBetaLimit = 0.3;
+  camera.upperBetaLimit = Math.PI / 2.05;
+  camera.inertia = 0.65;
+  camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
+  camera.attachControl(canvas, true);
+  camera.lockedTarget = tiger;
+
+  // Expanded-world bounds for systems that use this configuration.
+  // The ground mesh and movement/building systems must also be updated
+  // to match these bounds before the full expansion is playable.
+  const worldBounds = {
+    minX: -80,
+    maxX: 200,
+    minZ: -100,
+    maxZ: 100,
+  };
+
+  // Mana crystals throughout the expanded world.
+  const manaCrystals: Mesh[] = [];
+
+  const crystalPositions = [
+    // Starter rewards near spawn
+    [-4, -2], [4, -4], [-7, 5],
+
+    // Western discoveries
+    [-55, -30], [-68, 8], [-59, 42],
+    [-43, 67], [-25, 83], [-65, -65],
+    [-38, -78], [-12, -62],
+
+    // Original-world discoveries
+    [-17, -14], [-27, -8], [-28, 5],
+    [-33, 21], [-22, 29], [-10, 38],
+    [-12, -38], [0, -42], [17, -37],
+    [31, -32], [40, -19], [40, -5],
+    [39, 13], [31, 29], [17, 39],
+    [2, 35], [-8, 34], [-34, 28],
+    [-39, -23], [-25, -31], [-5, -35],
+    [23, -27], [-22, 2], [-14, 15],
+    [-5, 24], [8, 19], [21, 2], [28, 0],
+
+    // Northern and southern frontier
+    [-5, 57], [22, 65], [48, 78],
+    [76, 62], [112, 70], [151, 54],
+    [184, 25], [166, -12], [190, -45],
+    [148, -73], [111, -86], [67, -76],
+    [27, -89], [-18, -91], [-61, -42],
+
+    // Eastern discoveries
+    [62, -12], [88, -22], [112, -21],
+    [87, -8], [98, 1], [84, 0],
+    [126, 16], [145, 31], [172, 4],
+    [190, 62], [137, -39], [177, -79],
+  ];
+
+  crystalPositions.forEach(([x, z], i) => {
+    const crystal = MeshBuilder.CreatePolyhedron(
+      `ManaCrystal${i}`,
+      { type: 1, size: 0.65 },
       scene
     );
-    camera.lowerRadiusLimit = 7;
-    camera.upperRadiusLimit = 34;
-    camera.lowerBetaLimit = 0.3;
-    camera.upperBetaLimit = Math.PI / 2.05;
-    camera.inertia = 0.65;
-    camera.inputs.removeByType("ArcRotateCameraKeyboardMoveInput");
-    camera.attachControl(canvas, true);
-    camera.lockedTarget = tiger;
 
-        // Mana crystals throughout the expanded world.
-    const manaCrystals: Mesh[] = [];
-    const crystalPositions = [
-  // Starter rewards near spawn
-  [-4, -2], [4, -4], [-7, 5],
+    crystal.position.set(x, 0.9, z);
+    crystal.material = manaMat;
+    crystal.isPickable = false;
+    manaCrystals.push(crystal);
+  });
 
-  // Discoveries along the journey
-  [-17, -14], [-27, -8], [-28, 5],
-  [-33, 21], [-22, 29], [-10, 38],
-  [-12, -38], [0, -42], [17, -37],
-  [31, -32], [40, -19], [40, -5],
-  [39, 13], [31, 29], [17, 39],
-  [2, 35], [-8, 34], [-34, 28],
-  [-39, -23], [-25, -31], [-5, -35],
-  [23, -27], [-22, 2], [-14, 15],
-  [-5, 24], [8, 19], [21, 2], [28, 0],
+  // Bonus heart pickups scattered around the expanded world.
+  // Each heart restores one health when collected.
+  const heartPickups: HeartPickup[] = [];
 
-  // Hidden rewards near the medieval house
-  [62, -12], [88, -22], [112, -21],
-  [87, -8], [98, 1], [84, 0],
-];
+  const heartPositions = [
+    // Starter rewards near spawn
+    [-2, -6], [8, 3],
 
-    crystalPositions.forEach(([x, z], i) => {
-      const crystal = MeshBuilder.CreatePolyhedron(
-        `ManaCrystal${i}`,
-        { type: 1, size: 0.65 },
-        scene
-      );
-      crystal.position.set(x, 0.9, z);
-      crystal.material = manaMat;
-      crystal.isPickable = false;
-      manaCrystals.push(crystal);
+    // Original-world discoveries
+    [-19, -15], [-31, -7], [-8, 11],
+    [10, 25], [-14, 36], [-23, -38],
+    [-5, -11], [14, -39], [30, -31],
+    [39, -17], [40, 4], [35, 22],
+    [2, 36], [8, 40], [-13, 34],
+    [-32, 30], [-29, -25], [-24, -33],
+    [4, -34], [25, -25], [-23, 3],
+    [-16, 17], [-6, 25], [7, 21],
+    [22, 13], [29, 1],
+
+    // Western frontier
+    [-58, -18], [-70, 24], [-49, 55],
+    [-26, 72], [-62, -59], [-34, -82],
+
+    // Northern frontier
+    [-2, 57], [28, 73], [62, 84],
+    [99, 67], [143, 58], [181, 30],
+
+    // Southern frontier
+    [-10, -68], [22, -85], [58, -92],
+    [96, -78], [139, -69], [184, -49],
+
+    // Eastern frontier
+    [126, 10], [151, 36], [176, 7],
+    [192, -20], [166, -81],
+
+    // Hidden health rewards near the medieval house
+    [87, -5], [100, -22], [106, -14],
+    [99, -3],
+  ];
+
+  heartPositions.forEach(([x, z], index) => {
+    const parts: Mesh[] = [];
+
+    const leftLobe = MeshBuilder.CreateSphere(
+      `BonusHeart${index}Left`,
+      { diameter: 0.48, segments: 24 },
+      scene
+    );
+    leftLobe.position.set(x - 0.16, 0.83, z);
+    leftLobe.scaling.set(1, 1, 0.65);
+    leftLobe.material = heartRedMat;
+    leftLobe.isPickable = false;
+    parts.push(leftLobe);
+
+    const rightLobe = MeshBuilder.CreateSphere(
+      `BonusHeart${index}Right`,
+      { diameter: 0.48, segments: 24 },
+      scene
+    );
+    rightLobe.position.set(x + 0.16, 0.83, z);
+    rightLobe.scaling.set(1, 1, 0.65);
+    rightLobe.material = heartRedMat;
+    rightLobe.isPickable = false;
+    parts.push(rightLobe);
+
+    const point = MeshBuilder.CreateCylinder(
+      `BonusHeart${index}Point`,
+      {
+        height: 0.4,
+        diameterTop: 0,
+        diameterBottom: 0.38,
+        tessellation: 20,
+      },
+      scene
+    );
+    point.position.set(x, 0.64, z);
+    point.rotation.y = Math.PI / 4;
+    point.rotation.z = Math.PI;
+    point.material = heartRedMat;
+    point.isPickable = false;
+    parts.push(point);
+
+    const highlight = MeshBuilder.CreateSphere(
+      `BonusHeart${index}Highlight`,
+      { diameter: 0.1, segments: 20 },
+      scene
+    );
+    highlight.position.set(x - 0.2, 0.92, z - 0.04);
+    highlight.material = heartHighlightMat;
+    highlight.isPickable = false;
+    parts.push(highlight);
+
+    heartPickups.push({
+      x,
+      z,
+      parts,
+      baseY: parts.map((part) => part.position.y),
+      collected: false,
+    });
+  });
+
+  // Cats choose resting spots near registered trees in the expanded world.
+  const cats: Cat[] = [];
+
+  const catWorldBounds = {
+    minX: worldBounds.minX + 2,
+    maxX: worldBounds.maxX - 2,
+    minZ: worldBounds.minZ + 2,
+    maxZ: worldBounds.maxZ - 2,
+  };
+
+  const chooseCatRestSpot = (fromX: number, fromZ: number) => {
+    const validTrees = treePositions.filter(([treeX, treeZ]) => {
+      const insideWorld =
+        treeX >= catWorldBounds.minX &&
+        treeX <= catWorldBounds.maxX &&
+        treeZ >= catWorldBounds.minZ &&
+        treeZ <= catWorldBounds.maxZ;
+
+      const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
+
+      return insideWorld && distance > 4 && distance < 35;
     });
 
-    // BONUS HEART PICKUPS SCATTERED AROUND THE WORLD.
-    // Hearts are collected by walking close to them; each restores one health.
-    const heartPickups: HeartPickup[] = [];
-    const heartPositions = [
-  // Starter rewards near spawn
-  [-2, -6], [8, 3],
+    const allValidTrees = treePositions.filter(
+      ([treeX, treeZ]) =>
+        treeX >= catWorldBounds.minX &&
+        treeX <= catWorldBounds.maxX &&
+        treeZ >= catWorldBounds.minZ &&
+        treeZ <= catWorldBounds.maxZ
+    );
 
-  // Discoveries along the journey
-  [-19, -15], [-31, -7], [-8, 11],
-  [10, 25], [-14, 36], [-23, -38],
-  [-5, -11], [14, -39], [30, -31],
-  [39, -17], [40, 4], [35, 22],
-  [2, 36], [8, 40], [-13, 34],
-  [-32, 30], [-29, -25], [-24, -33],
-  [4, -34], [25, -25], [-23, 3],
-  [-16, 17], [-6, 25], [7, 21],
-  [22, 13], [29, 1],
+    const choices =
+      validTrees.length > 0
+        ? validTrees
+        : allValidTrees.length > 0
+          ? allValidTrees
+          : [[fromX, fromZ]];
 
-  // Hidden health rewards near the medieval house
-  [8, -17], [87, -5], [100, -22],
-  [106, -14], [99, -3],
-];
+    const [treeX, treeZ] =
+      choices[Math.floor(Math.random() * choices.length)];
 
-    heartPositions.forEach(([x, z], index) => {
-      const parts: Mesh[] = [];
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 0.75 + Math.random() * 0.55;
 
-      const leftLobe = MeshBuilder.CreateSphere(
-        `BonusHeart${index}Left`,
-        { diameter: 0.48, segments: 24 },
-        scene
-      );
-      leftLobe.position.set(x - 0.16, 0.83, z);
-      leftLobe.scaling.set(1, 1, 0.65);
-      leftLobe.material = heartRedMat;
-      leftLobe.isPickable = false;
-      parts.push(leftLobe);
-
-      const rightLobe = MeshBuilder.CreateSphere(
-        `BonusHeart${index}Right`,
-        { diameter: 0.48, segments: 24 },
-        scene
-      );
-      rightLobe.position.set(x + 0.16, 0.83, z);
-      rightLobe.scaling.set(1, 1, 0.65);
-      rightLobe.material = heartRedMat;
-      rightLobe.isPickable = false;
-      parts.push(rightLobe);
-
-      const point = MeshBuilder.CreateCylinder(
-        `BonusHeart${index}Point`,
-        {
-          height: 0.4,
-          diameterTop: 0,
-          diameterBottom: 0.38,
-          tessellation: 20,
-        },
-        scene
-      );
-      point.position.set(x, 0.64, z);
-      point.rotation.y = Math.PI / 4;
-      point.rotation.z = Math.PI;
-      point.material = heartRedMat;
-      point.isPickable = false;
-      parts.push(point);
-
-      const highlight = MeshBuilder.CreateSphere(
-        `BonusHeart${index}Highlight`,
-        { diameter: 0.1, segments: 20 },
-        scene
-      );
-      highlight.position.set(x - 0.2, 0.92, z - 0.04);
-      highlight.material = heartHighlightMat;
-      highlight.isPickable = false;
-      parts.push(highlight);
-
-      heartPickups.push({
-        x,
-        z,
-        parts,
-        baseY: parts.map((part) => part.position.y),
-        collected: false,
-      });
-    });
-
-    // Cats wander between nearby trees and pause in the shade before moving on.
-    const cats: Cat[] = [];
-
-    const chooseCatRestSpot = (fromX: number, fromZ: number) => {
-      const nearbyTrees = treePositions.filter(([treeX, treeZ]) => {
-        const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
-        return distance > 4 && distance < 22;
-      });
-      const choices = nearbyTrees.length > 0 ? nearbyTrees : treePositions;
-      const [treeX, treeZ] = choices[Math.floor(Math.random() * choices.length)];
-      const angle = Math.random() * Math.PI * 2;
-      // Keep each cat close enough to the trunk to look like it is resting under the canopy.
-      const radius = 0.75 + Math.random() * 0.55;
-      return {
-        x: Math.max(-37, Math.min(37, treeX + Math.cos(angle) * radius)),
-        z: Math.max(-37, Math.min(37, treeZ + Math.sin(angle) * radius)),
-      };
+    return {
+      x: Math.max(
+        catWorldBounds.minX,
+        Math.min(catWorldBounds.maxX, treeX + Math.cos(angle) * radius)
+      ),
+      z: Math.max(
+        catWorldBounds.minZ,
+        Math.min(catWorldBounds.maxZ, treeZ + Math.sin(angle) * radius)
+      ),
     };
+  };
 
-    const createCat = (
-      name: string,
-      x: number,
-      z: number,
-      color: StandardMaterial
+  const createCat = (
+    name: string,
+    x: number,
+    z: number,
+    color: StandardMaterial
+  ) => {
+    const parts: Mesh[] = [];
+
+    const addPart = (
+      mesh: Mesh,
+      px: number,
+      py: number,
+      pz: number,
+      material = color
     ) => {
-      const parts: Mesh[] = [];
-
-      const addPart = (
-        mesh: Mesh,
-        px: number,
-        py: number,
-        pz: number,
-        material = color
-      ) => {
-        mesh.position.set(px, py, pz);
-        mesh.material = material;
-        mesh.isPickable = false;
-        parts.push(mesh);
-        return mesh;
-      };
-
-      addPart(
-        MeshBuilder.CreateSphere(`${name}Body`, { diameter: 0.8 }, scene),
-        x, 0.45, z
-      );
-
-      addPart(
-        MeshBuilder.CreateSphere(`${name}Head`, { diameter: 0.65 }, scene),
-        x, 0.85, z + 0.35
-      );
-
-      const leftEar = addPart(
-        MeshBuilder.CreateCylinder(
-          `${name}EarLeft`,
-          { height: 0.32, diameterTop: 0, diameterBottom: 0.24 },
-          scene
-        ),
-        x - 0.2, 1.17, z + 0.35
-      );
-      leftEar.rotation.z = -0.18;
-
-      const rightEar = addPart(
-        MeshBuilder.CreateCylinder(
-          `${name}EarRight`,
-          { height: 0.32, diameterTop: 0, diameterBottom: 0.24 },
-          scene
-        ),
-        x + 0.2, 1.17, z + 0.35
-      );
-      rightEar.rotation.z = 0.18;
-
-      for (const offset of [-0.13, 0.13]) {
-        addPart(
-          MeshBuilder.CreateSphere(
-            `${name}Eye${offset}`,
-            { diameter: 0.09 },
-            scene
-          ),
-          x + offset, 0.9, z + 0.64, blackMat
-        );
-      }
-
-      addPart(
-        MeshBuilder.CreateSphere(`${name}Nose`, { diameter: 0.09 }, scene),
-        x, 0.8, z + 0.68, pinkMat
-      );
-
-      const tail = addPart(
-        MeshBuilder.CreateCylinder(
-          `${name}Tail`,
-          { height: 0.65, diameter: 0.13 },
-          scene
-        ),
-        x + 0.43, 0.55, z - 0.22
-      );
-      tail.rotation.z = Math.PI / 3;
-
-      const firstRestSpot = chooseCatRestSpot(x, z);
-      cats.push({
-        name,
-        x,
-        z,
-        parts,
-        modelRoot: null,
-        animationGroups: [],
-        partOffsets: parts.map(
-          (part) => new Vector3(part.position.x - x, part.position.y, part.position.z - z)
-        ),
-        targetX: firstRestSpot.x,
-        targetZ: firstRestSpot.z,
-        yaw: 0,
-        restingUntil: 0,
-        rescued: false,
-        housed: false,
-        barnIndex: null,
-      });
-    };
-
-    createCat("Mittens", -4, -3, whiteMat);
-    createCat("Pumpkin", 5, -5, orangeMat);
-    createCat("Shadow", -7, 1, grayMat);
-
-    // Load the animated model for Mittens only; retain procedural fallbacks.
-    void (async () => {
-      const cat = cats.find((entry) => entry.name === "Mittens");
-      if (!cat) return;
-
-      try {
-        const imported = await SceneLoader.ImportMeshAsync(
-          "",
-          "/models/",
-          "an_animated_cat.glb",
-          scene
-        );
-
-        const modelMeshes = imported.meshes.filter(
-          (mesh) => mesh.getTotalVertices() > 0
-        );
-
-        if (modelMeshes.length === 0) {
-          throw new Error("The GLB contains no renderable meshes.");
-        }
-
-        let minY = Number.POSITIVE_INFINITY;
-        let maxY = Number.NEGATIVE_INFINITY;
-
-        modelMeshes.forEach((mesh) => {
-          mesh.computeWorldMatrix(true);
-          const bounds = mesh.getBoundingInfo().boundingBox;
-          minY = Math.min(minY, bounds.minimumWorld.y);
-          maxY = Math.max(maxY, bounds.maximumWorld.y);
-        });
-
-        const modelHeight = maxY - minY;
-        if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
-          throw new Error("Could not determine the animated cat height.");
-        }
-
-        const scale = 1.1 / modelHeight;
-        const visualRoot = new TransformNode("MittensAnimatedRoot", scene);
-        visualRoot.position.set(cat.x, 0, cat.z);
-
-        const importedRoot =
-          imported.meshes.find((mesh) => mesh.name === "__root__") ??
-          imported.meshes.find((mesh) => mesh.parent === null);
-
-        if (importedRoot) {
-          importedRoot.parent = visualRoot;
-          importedRoot.scaling.scaleInPlace(scale);
-          importedRoot.position.y += -minY * scale;
-        } else {
-          modelMeshes.forEach((mesh) => {
-            if (!mesh.parent) {
-              mesh.parent = visualRoot;
-              mesh.scaling.scaleInPlace(scale);
-            }
-          });
-        }
-
-        imported.meshes.forEach((mesh) => {
-          if (mesh !== importedRoot && !mesh.parent) {
-            mesh.parent = visualRoot;
-          }
-
-          if (mesh.getTotalVertices() > 0) {
-            mesh.isPickable = false;
-            shadowGenerator.addShadowCaster(mesh);
-          }
-        });
-
-        cat.modelRoot = visualRoot;
-        cat.animationGroups = imported.animationGroups;
-
-        const animation =
-          cat.animationGroups.find((group) => /idle|stand|breath/i.test(group.name)) ??
-          cat.animationGroups[0];
-
-        if (animation) animation.start(true);
-
-        // Hide the procedural cat only after the GLB loads successfully.
-        cat.parts.forEach((part) => {
-          part.setEnabled(false);
-          shadowGenerator.removeShadowCaster(part);
-        });
-
-        console.info(
-          "Animated cat loaded:",
-          cat.name,
-          "animation:",
-          animation?.name ?? "none"
-        );
-      } catch (error) {
-        console.error(
-          "Could not load the animated cat; using the procedural fallback.",
-          error
-        );
-      }
-    })();
-
-    // Resource pickups spread across the world for exploration.
-    const resources: Resource[] = [];
-    const createResource = (
-      type: "wood" | "stone",
-      x: number,
-      z: number,
-      index: number
-    ) => {
-      let mesh: Mesh;
-
-      if (type === "wood") {
-        // One invisible gameplay root keeps the existing pickup logic intact.
-        mesh = MeshBuilder.CreateBox(
-          `WoodResource${index}`,
-          { width: 1.15, height: 0.75, depth: 0.9 },
-          scene
-        );
-        mesh.position.set(x, 0.38, z);
-        mesh.isVisible = false;
-        mesh.isPickable = false;
-
-        const logMaterial: Material = rusticTimberMat ?? woodMat;
-
-        // Three chunky, horizontal logs arranged in a compact stack.
-        const logSpecs = [
-          { x: -0.12, y: 0.19, z: -0.2, rotation: 0 },
-          { x: 0.12, y: 0.19, z: 0.2, rotation: 0 },
-          { x: 0, y: 0.46, z: 0, rotation: Math.PI / 2 },
-        ];
-
-        logSpecs.forEach((spec, logIndex) => {
-          const log = MeshBuilder.CreateCylinder(
-            `WoodResource${index}Log${logIndex}`,
-            {
-              height: 0.8,
-              diameter: 0.3,
-              tessellation: 12,
-            },
-            scene
-          );
-
-          // Cylinders run along their local Y axis by default.
-          log.rotation.z = Math.PI / 2;
-          log.rotation.y = spec.rotation;
-          log.position.set(
-            x + spec.x,
-            spec.y,
-            z + spec.z
-          );
-          log.material = logMaterial;
-          log.isPickable = false;
-          log.receiveShadows = true;
-          shadowGenerator.addShadowCaster(log);
-
-          // Parent the visible logs to the resource root so hiding the
-          // resource on collection hides every log in the stack.
-          log.parent = mesh;
-          log.position.set(spec.x, spec.y - 0.38, spec.z);
-        });
-      } else {
-        // Keep the existing low-poly rounded rock.
-        mesh = MeshBuilder.CreateSphere(
-          `StoneResource${index}`,
-          { diameter: 1, segments: 24 },
-          scene
-        );
-
-        const variation = 0.82 + Math.random() * 0.3;
-        mesh.scaling.set(
-          variation * (0.9 + Math.random() * 0.25),
-          variation * (0.7 + Math.random() * 0.25),
-          variation * (0.85 + Math.random() * 0.3)
-        );
-
-        mesh.position.set(x, 0.34, z);
-        mesh.rotation.set(
-          (Math.random() - 0.5) * 0.35,
-          Math.random() * Math.PI * 2,
-          (Math.random() - 0.5) * 0.35
-        );
-        mesh.material = stoneMat;
-      }
-
+      mesh.position.set(px, py, pz);
+      mesh.material = material;
       mesh.isPickable = false;
-      resources.push({ type, mesh, x, z, collected: false });
+      parts.push(mesh);
+      return mesh;
     };
+
+    addPart(
+      MeshBuilder.CreateSphere(`${name}Body`, { diameter: 0.8 }, scene),
+      x, 0.45, z
+    );
+
+    addPart(
+      MeshBuilder.CreateSphere(`${name}Head`, { diameter: 0.65 }, scene),
+      x, 0.85, z + 0.35
+    );
+
+    const leftEar = addPart(
+      MeshBuilder.CreateCylinder(
+        `${name}EarLeft`,
+        { height: 0.32, diameterTop: 0, diameterBottom: 0.24 },
+        scene
+      ),
+      x - 0.2, 1.17, z + 0.35
+    );
+    leftEar.rotation.z = -0.18;
+
+    const rightEar = addPart(
+      MeshBuilder.CreateCylinder(
+        `${name}EarRight`,
+        { height: 0.32, diameterTop: 0, diameterBottom: 0.24 },
+        scene
+      ),
+      x + 0.2, 1.17, z + 0.35
+    );
+    rightEar.rotation.z = 0.18;
+
+    for (const offset of [-0.13, 0.13]) {
+      addPart(
+        MeshBuilder.CreateSphere(
+          `${name}Eye${offset}`,
+          { diameter: 0.09 },
+          scene
+        ),
+        x + offset, 0.9, z + 0.64, blackMat
+      );
+    }
+
+    addPart(
+      MeshBuilder.CreateSphere(`${name}Nose`, { diameter: 0.09 }, scene),
+      x, 0.8, z + 0.68, pinkMat
+    );
+
+    const tail = addPart(
+      MeshBuilder.CreateCylinder(
+        `${name}Tail`,
+        { height: 0.65, diameter: 0.13 },
+        scene
+      ),
+      x + 0.43, 0.55, z - 0.22
+    );
+    tail.rotation.z = Math.PI / 3;
+
+    const firstRestSpot = chooseCatRestSpot(x, z);
+
+    cats.push({
+      name,
+      x,
+      z,
+      parts,
+      modelRoot: null,
+      animationGroups: [],
+      partOffsets: parts.map(
+        (part) =>
+          new Vector3(
+            part.position.x - x,
+            part.position.y,
+            part.position.z - z
+          )
+      ),
+      targetX: firstRestSpot.x,
+      targetZ: firstRestSpot.z,
+      yaw: 0,
+      restingUntil: 0,
+      rescued: false,
+      housed: false,
+      barnIndex: null,
+    });
+  };
+
+  createCat("Mittens", -4, -3, whiteMat);
+  createCat("Pumpkin", 5, -5, orangeMat);
+  createCat("Shadow", -7, 1, grayMat);
+
+  // Load the animated model for Mittens only; retain procedural fallbacks.
+  void (async () => {
+    const cat = cats.find((entry) => entry.name === "Mittens");
+    if (!cat) return;
+
+    try {
+      const imported = await SceneLoader.ImportMeshAsync(
+        "",
+        "/models/",
+        "an_animated_cat.glb",
+        scene
+      );
+
+      const modelMeshes = imported.meshes.filter(
+        (mesh) => mesh.getTotalVertices() > 0
+      );
+
+      if (modelMeshes.length === 0) {
+        throw new Error("The GLB contains no renderable meshes.");
+      }
+
+      let minY = Number.POSITIVE_INFINITY;
+      let maxY = Number.NEGATIVE_INFINITY;
+
+      modelMeshes.forEach((mesh) => {
+        mesh.computeWorldMatrix(true);
+        const bounds = mesh.getBoundingInfo().boundingBox;
+        minY = Math.min(minY, bounds.minimumWorld.y);
+        maxY = Math.max(maxY, bounds.maximumWorld.y);
+      });
+
+      const modelHeight = maxY - minY;
+      if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
+        throw new Error("Could not determine the animated cat height.");
+      }
+
+      const scale = 1.1 / modelHeight;
+      const visualRoot = new TransformNode("MittensAnimatedRoot", scene);
+      visualRoot.position.set(cat.x, 0, cat.z);
+
+      const importedRoot =
+        imported.meshes.find((mesh) => mesh.name === "__root__") ??
+        imported.meshes.find((mesh) => mesh.parent === null);
+
+      if (importedRoot) {
+        importedRoot.parent = visualRoot;
+        importedRoot.scaling.scaleInPlace(scale);
+        importedRoot.position.y += -minY * scale;
+      } else {
+        modelMeshes.forEach((mesh) => {
+          if (!mesh.parent) {
+            mesh.parent = visualRoot;
+            mesh.scaling.scaleInPlace(scale);
+          }
+        });
+      }
+
+      imported.meshes.forEach((mesh) => {
+        if (mesh !== importedRoot && !mesh.parent) {
+          mesh.parent = visualRoot;
+        }
+
+        if (mesh.getTotalVertices() > 0) {
+          mesh.isPickable = false;
+          shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+
+      cat.modelRoot = visualRoot;
+      cat.animationGroups = imported.animationGroups;
+
+      const animation = cat.animationGroups.find((group) =>
+        /idle|stand|breath/i.test(group.name)
+      );
+
+      if (animation) {
+        animation.start(true);
+      } else {
+        console.warn(
+          `No idle animation found for ${cat.name}. Available animations:`,
+          cat.animationGroups.map((group) => group.name)
+        );
+      }
+
+      // Keep the procedural fallback available until the model loads.
+      cat.parts.forEach((part) => {
+        part.setEnabled(false);
+        shadowGenerator.removeShadowCaster(part);
+      });
+
+      console.info(
+        "Animated cat loaded:",
+        cat.name,
+        "animation:",
+        animation?.name ?? "none"
+      );
+    } catch (error) {
+      console.error(
+        "Could not load the animated cat; using the procedural fallback.",
+        error
+      );
+    }
+  })();
+
+  // Resource pickups spread across the expanded world for exploration.
+  const resources: Resource[] = [];
+
+  const createResource = (
+    type: "wood" | "stone",
+    x: number,
+    z: number,
+    index: number
+  ) => {
+    let mesh: Mesh;
+
+    if (type === "wood") {
+      mesh = MeshBuilder.CreateBox(
+        `WoodResource${index}`,
+        { width: 1.15, height: 0.75, depth: 0.9 },
+        scene
+      );
+      mesh.position.set(x, 0.38, z);
+      mesh.isVisible = false;
+      mesh.isPickable = false;
+
+      const logMaterial: Material = rusticTimberMat ?? woodMat;
+
+      const logSpecs = [
+        { x: -0.12, y: 0.19, z: -0.2, rotation: 0 },
+        { x: 0.12, y: 0.19, z: 0.2, rotation: 0 },
+        { x: 0, y: 0.46, z: 0, rotation: Math.PI / 2 },
+      ];
+
+      logSpecs.forEach((spec, logIndex) => {
+        const log = MeshBuilder.CreateCylinder(
+          `WoodResource${index}Log${logIndex}`,
+          {
+            height: 0.8,
+            diameter: 0.3,
+            tessellation: 12,
+          },
+          scene
+        );
+
+        log.rotation.z = Math.PI / 2;
+        log.rotation.y = spec.rotation;
+        log.position.set(x + spec.x, spec.y, z + spec.z);
+        log.material = logMaterial;
+        log.isPickable = false;
+        log.receiveShadows = true;
+        shadowGenerator.addShadowCaster(log);
+
+        log.parent = mesh;
+        log.position.set(spec.x, spec.y - 0.38, spec.z);
+      });
+    } else {
+      mesh = MeshBuilder.CreateSphere(
+        `StoneResource${index}`,
+        { diameter: 1, segments: 24 },
+        scene
+      );
+
+      const variation = 0.82 + Math.random() * 0.3;
+      mesh.scaling.set(
+        variation * (0.9 + Math.random() * 0.25),
+        variation * (0.7 + Math.random() * 0.25),
+        variation * (0.85 + Math.random() * 0.3)
+      );
+
+      mesh.position.set(x, 0.34, z);
+      mesh.rotation.set(
+        (Math.random() - 0.5) * 0.35,
+        Math.random() * Math.PI * 2,
+        (Math.random() - 0.5) * 0.35
+      );
+      mesh.material = stoneMat;
+    }
+
+    mesh.isPickable = false;
+    resources.push({ type, mesh, x, z, collected: false });
+  };
 
     // WOOD — isolated finds across the main world.
     [
@@ -2395,7 +2483,7 @@ setMessage("Tiger's 3D model is ready!");
       [36, -37],
 
       // Eastern reaches
-      [35, -5], [24, 51], [5, 38],
+      [35, -5], [24, 47], [5, 38],
       [41, 17],
 
       // Southern reaches
@@ -2495,121 +2583,133 @@ setMessage("Tiger's 3D model is ready!");
 
     const projectiles: Projectile[] = [];
 
-// TIGER'S LIGHTNING MAGIC ⚡
-// Build a jagged lightning bolt from connected, emissive segments.
-const createLightningBolt = (
-  name: string,
-  length = 1.35,
-  width = 0.48
-): Mesh => {
-  const bolt = MeshBuilder.CreateBox(
-    name,
-    { width: 0.01, height: 0.01, depth: 0.01 },
-    scene
-  );
+    // TIGER'S LIGHTNING MAGIC ⚡
+    // Build a jagged lightning bolt from connected emissive segments.
+    const createLightningBolt = (
+      name: string,
+      length = 1.35,
+      width = 0.48
+    ): Mesh => {
+      const bolt = MeshBuilder.CreateBox(
+        name,
+        { width: 0.01, height: 0.01, depth: 0.01 },
+        scene
+      );
 
-  bolt.isPickable = false;
-  bolt.isVisible = false;
+      bolt.isPickable = false;
+      bolt.isVisible = false;
 
-  const segments = [
-    {
-      x1: width * 0.08,
-      y1: length * 0.5,
-      x2: -width * 0.08,
-      y2: length * 0.13,
-      thickness: width * 0.19,
-    },
-    {
-      x1: -width * 0.08,
-      y1: length * 0.13,
-      x2: width * 0.48,
-      y2: length * 0.13,
-      thickness: width * 0.19,
-    },
-    {
-      x1: width * 0.48,
-      y1: length * 0.13,
-      x2: -width * 0.12,
-      y2: -length * 0.12,
-      thickness: width * 0.19,
-    },
-    {
-      x1: -width * 0.12,
-      y1: -length * 0.12,
-      x2: width * 0.12,
-      y2: -length * 0.12,
-      thickness: width * 0.19,
-    },
-    {
-      x1: width * 0.12,
-      y1: -length * 0.12,
-      x2: -width * 0.42,
-      y2: -length * 0.5,
-      thickness: width * 0.19,
-    },
-  ];
+      const segments = [
+        {
+          x1: width * 0.08,
+          y1: length * 0.5,
+          x2: -width * 0.08,
+          y2: length * 0.13,
+          thickness: width * 0.19,
+        },
+        {
+          x1: -width * 0.08,
+          y1: length * 0.13,
+          x2: width * 0.48,
+          y2: length * 0.13,
+          thickness: width * 0.19,
+        },
+        {
+          x1: width * 0.48,
+          y1: length * 0.13,
+          x2: -width * 0.12,
+          y2: -length * 0.12,
+          thickness: width * 0.19,
+        },
+        {
+          x1: -width * 0.12,
+          y1: -length * 0.12,
+          x2: width * 0.12,
+          y2: -length * 0.12,
+          thickness: width * 0.19,
+        },
+        {
+          x1: width * 0.12,
+          y1: -length * 0.12,
+          x2: -width * 0.42,
+          y2: -length * 0.5,
+          thickness: width * 0.19,
+        },
+      ];
 
-  segments.forEach((segment, index) => {
-    const start = new Vector3(segment.x1, segment.y1, 0);
-    const end = new Vector3(segment.x2, segment.y2, 0);
-    const direction = end.subtract(start);
-    const midpoint = start.add(end).scale(0.5);
+      segments.forEach((segment, index) => {
+        const start = new Vector3(segment.x1, segment.y1, 0);
+        const end = new Vector3(segment.x2, segment.y2, 0);
+        const direction = end.subtract(start);
+        const midpoint = start.add(end).scale(0.5);
 
-    const piece = MeshBuilder.CreateBox(
-      `${name}Segment${index}`,
-      {
-        width: segment.thickness,
-        height: direction.length() + segment.thickness * 0.45,
-        depth: 0.055,
-      },
+        const piece = MeshBuilder.CreateBox(
+          `${name}Segment${index}`,
+          {
+            width: segment.thickness,
+            height: direction.length() + segment.thickness * 0.45,
+            depth: 0.055,
+          },
+          scene
+        );
+
+        piece.position.copyFrom(midpoint);
+        piece.rotation.z = -Math.atan2(direction.x, direction.y);
+        piece.parent = bolt;
+        piece.isPickable = false;
+      });
+
+      return bolt;
+    };
+
+    // Bright electric core.
+    const lightningCoreMat = new StandardMaterial(
+      "LightningCoreMaterial",
       scene
     );
+    lightningCoreMat.diffuseColor = new Color3(0.75, 0.95, 1);
+    lightningCoreMat.emissiveColor = new Color3(0.25, 0.8, 1);
+    lightningCoreMat.specularColor = new Color3(1, 1, 1);
+    lightningCoreMat.disableLighting = true;
 
-    piece.position.copyFrom(midpoint);
-    piece.rotation.z = -Math.atan2(direction.x, direction.y);
-    piece.parent = bolt;
-    piece.isPickable = false;
-  });
+    // Electric-blue aura.
+    const lightningAuraMat = new StandardMaterial(
+      "LightningAuraMaterial",
+      scene
+    );
+    lightningAuraMat.diffuseColor = new Color3(0.15, 0.45, 1);
+    lightningAuraMat.emissiveColor = new Color3(0.08, 0.25, 1);
+    lightningAuraMat.alpha = 0.42;
+    lightningAuraMat.disableLighting = true;
 
-  return bolt;
-};
+    // Build a complete bolt with a blue aura and bright inner core.
+    const createLightningProjectileVisual = (name: string) => {
+      const aura = createLightningBolt(`${name}Aura`, 1.65, 0.68);
+      aura.material = lightningAuraMat;
+      aura.isVisible = true;
+      aura.isPickable = false;
 
-// Bright electric core.
-const lightningCoreMat = new StandardMaterial(
-  "LightningCoreMaterial",
-  scene
-);
-lightningCoreMat.diffuseColor = new Color3(0.75, 0.95, 1);
-lightningCoreMat.emissiveColor = new Color3(0.25, 0.8, 1);
-lightningCoreMat.specularColor = new Color3(1, 1, 1);
-lightningCoreMat.disableLighting = true;
+      aura.getChildMeshes().forEach((mesh) => {
+        mesh.material = lightningAuraMat;
+        mesh.isVisible = true;
+        mesh.isPickable = false;
+      });
 
-// Electric-blue aura.
-const lightningAuraMat = new StandardMaterial(
-  "LightningAuraMaterial",
-  scene
-);
-lightningAuraMat.diffuseColor = new Color3(0.15, 0.45, 1);
-lightningAuraMat.emissiveColor = new Color3(0.08, 0.25, 1);
-lightningAuraMat.alpha = 0.42;
-lightningAuraMat.disableLighting = true;
+      const core = createLightningBolt(`${name}Core`, 1.35, 0.48);
+      core.material = lightningCoreMat;
+      core.parent = aura;
+      core.position.set(0, 0, -0.06);
+      core.isVisible = true;
+      core.isPickable = false;
 
-// Build a complete bolt with a blue aura and bright inner core.
-const createLightningProjectileVisual = (name: string) => {
-  const aura = createLightningBolt(`${name}Aura`, 1.65, 0.68);
-  aura.material = lightningAuraMat;
-  aura.isVisible = true;
-  aura.isPickable = false;
+      core.getChildMeshes().forEach((mesh) => {
+        mesh.material = lightningCoreMat;
+        mesh.isVisible = true;
+        mesh.isPickable = false;
+      });
 
-  const core = createLightningBolt(`${name}Core`, 1.35, 0.48);
-  core.material = lightningCoreMat;
-  core.parent = aura;
-  core.position.set(0, 0, -0.06);
-  core.isVisible = true;
-  core.isPickable = false;
-
-  return aura;
-};
+      return aura;
+    };
 
     let buildX = 0;
     let buildZ = 0;
@@ -2661,37 +2761,33 @@ const createLightningProjectileVisual = (name: string) => {
         cast: [/spell.cast/i],
       };
 
-     const next = 
+      const next =
         tigerModelAnimations.find((group) => group.name === clipNames[kind]) ??
         tigerModelAnimations.find((group) =>
           fallbackPatterns[kind].some((pattern) => pattern.test(group.name))
         );
 
-     
-if (!next || next.name === activeTigerAnimation) return;
+      if (!next || next.name === activeTigerAnimation) return;
 
+      const previous = tigerModelAnimations.find(
+        (group) => group.name === activeTigerAnimation
+      );
 
-const previous = tigerModelAnimations.find(
-  (group) => group.name === activeTigerAnimation
-);
+      if (previous?.isPlaying) {
+        previous.stop();
+      }
 
-if (previous?.isPlaying) {
-  previous.stop();
-}
+      tigerModelAnimations.forEach((group) => {
+        if (group !== next) group.stop();
+      });
 
-tigerModelAnimations.forEach((group) => {
-  if (group !== next) group.stop();
-});
+      next.start(kind !== "cast");
+      activeTigerAnimation = next.name;
 
-next.start(kind !== "cast");
-activeTigerAnimation = next.name;
-
-activeTigerAnimation = next.name;
-
-    if (kind === "cast") {
-  tigerIsCasting = true;
-  tigerCastSecondsRemaining = (next.to - next.from) / 60;
-}
+      if (kind === "cast") {
+        tigerIsCasting = true;
+        tigerCastSecondsRemaining = (next.to - next.from) / 60;
+      }
     };
 
     let isGrounded = true;
@@ -2714,7 +2810,6 @@ activeTigerAnimation = next.name;
       keys.clear();
     };
 
-  
     // HELLO TIGER! — Reusable Imported Material Library
     // let rusticTimberMat: Material | null = null;
     // let weatheredPlanksMat: Material | null = null;
@@ -2874,8 +2969,8 @@ activeTigerAnimation = next.name;
       rotation: number,
       index: number
     ): Barn => {
-const wallMaterial: Material = weatheredPlanksMat ?? barnRedMat;
-const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
+      const wallMaterial: Material = weatheredPlanksMat ?? barnRedMat;
+      const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
       const parts = createBarnParts(
         `BuiltBarn${index}`,
@@ -2886,8 +2981,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
       placeParts(parts, x, z, rotation);
 
-      // Six warm straw pads make each rescued cat's spot easy to see
-      // through the barn's open front.
+      // Six warm straw pads make each rescued cat's spot easy to see.
       const catSlots = [
         [-0.85, -0.62],
         [0, -0.62],
@@ -3022,13 +3116,17 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       }
     };
 
-
     const clearWaterPreview = () => {
       waterPreview.forEach((part) => part.dispose());
       waterPreview = [];
     };
 
-    const createWaterTile = (x: number, z: number, prefix: string, preview = false) => {
+    const createWaterTile = (
+      x: number,
+      z: number,
+      prefix: string,
+      preview = false
+    ) => {
       const parts: Mesh[] = [];
       const surface = MeshBuilder.CreateBox(
         `${prefix}Surface`,
@@ -3040,403 +3138,457 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       surface.isPickable = false;
       parts.push(surface);
 
-      // Three bright, inset ripple lines make a water block read as water at a glance.
-      for (let i = 0; i < 3; i++) {
-        const ripple = MeshBuilder.CreateBox(
-          `${prefix}Ripple${i}`,
-          { width: 0.9 - i * 0.18, height: 0.018, depth: 0.055 },
-          scene
-        );
-        ripple.position.set(x, 0.165 + i * 0.003, z + (i - 1) * 0.38);
-        ripple.material = preview ? ghostMat : waterRippleMat;
-        ripple.isPickable = false;
-        parts.push(ripple);
-      }
-      return parts;
-    };
-
-    const updateWaterPreview = () => {
-      if (waterPreview.length === 0) {
-        waterPreview = createWaterTile(waterX, waterZ, "WaterPreview", true);
-      } else {
-        waterPreview[0].position.set(waterX, 0.11, waterZ);
-        for (let i = 1; i < waterPreview.length; i++) {
-          waterPreview[i].position.x = waterX;
-          waterPreview[i].position.z = waterZ + (i - 2) * 0.38;
-        }
-      }
-    };
-
-    // Place a housed cat inside a barn and make its model visible again.
-    const houseOneCat = () => {
-      if (barns.length === 0) {
-        setMessage("Build a barn first, then you can house rescued cats.");
-        return;
-      }
-
-      const nextCat = cats.find(
-        (cat) => cat.rescued && !cat.housed
+    // Three bright, inset ripple lines make a water block read as water.
+    for (let i = 0; i < 3; i++) {
+      const ripple = MeshBuilder.CreateBox(
+        `${prefix}Ripple${i}`,
+        { width: 0.9 - i * 0.18, height: 0.018, depth: 0.055 },
+        scene
       );
+      ripple.position.set(x, 0.165 + i * 0.003, z + (i - 1) * 0.38);
+      ripple.material = preview ? ghostMat : waterRippleMat;
+      ripple.isPickable = false;
+      parts.push(ripple);
+    }
 
-      if (!nextCat) {
-        setMessage("No rescued cats are waiting for a home right now.");
-        return;
+    return parts;
+  };
+
+  const updateWaterPreview = () => {
+    if (waterPreview.length === 0) {
+      waterPreview = createWaterTile(waterX, waterZ, "WaterPreview", true);
+    } else {
+      waterPreview[0].position.set(waterX, 0.11, waterZ);
+
+      for (let i = 1; i < waterPreview.length; i++) {
+        waterPreview[i].position.x = waterX;
+        waterPreview[i].position.z = waterZ + (i - 2) * 0.38;
       }
+    }
+  };
 
-      const slots = [
-        [-0.85, -0.62],
-        [0, -0.62],
-        [0.85, -0.62],
-        [-0.85, 0.45],
-        [0, 0.45],
-        [0.85, 0.45],
-      ];
+  // Place a housed cat inside a barn and make its model visible again.
+  const houseOneCat = () => {
+    if (barns.length === 0) {
+      setMessage("Build a barn first, then you can house rescued cats.");
+      return;
+    }
 
-      const barnIndex = barns.findIndex((_, index) => {
-        const count = cats.filter(
-          (cat) => cat.housed && cat.barnIndex === index
-        ).length;
-        return count < slots.length;
-      });
+    const nextCat = cats.find((cat) => cat.rescued && !cat.housed);
 
-  if (barnIndex < 0) {
-  setMessage("All barns are full! Build another barn to house more cats.");
-  return;
-}
+    if (!nextCat) {
+      setMessage("No rescued cats are waiting for a home right now.");
+      return;
+    }
 
-      const barn = barns[barnIndex];
-      const housedInBarn = cats.filter(
-        (cat) => cat.housed && cat.barnIndex === barnIndex
+    const slots = [
+      [-0.85, -0.62],
+      [0, -0.62],
+      [0.85, -0.62],
+      [-0.85, 0.45],
+      [0, 0.45],
+      [0.85, 0.45],
+    ];
+
+    const barnIndex = barns.findIndex((_, index) => {
+      const count = cats.filter(
+        (cat) => cat.housed && cat.barnIndex === index
       ).length;
 
-      const [localX, localZ] = slots[housedInBarn];
-      const radians = (barn.rotation * Math.PI) / 180;
+      return count < slots.length;
+    });
 
-      const targetX =
-        barn.x + localX * Math.cos(radians) -
-        localZ * Math.sin(radians);
-      const targetZ =
-        barn.z + localX * Math.sin(radians) +
-        localZ * Math.cos(radians);
+    if (barnIndex < 0) {
+      setMessage("All barns are full! Build another barn to house more cats.");
+      return;
+    }
 
-      const deltaX = targetX - nextCat.x;
-      const deltaZ = targetZ - nextCat.z;
+    const barn = barns[barnIndex];
+    const housedInBarn = cats.filter(
+      (cat) => cat.housed && cat.barnIndex === barnIndex
+    ).length;
 
-      if (nextCat.modelRoot) {
-        nextCat.modelRoot.position.set(targetX, 0, targetZ);
-        nextCat.modelRoot.rotation.y = nextCat.yaw;
-        nextCat.modelRoot.setEnabled(true);
-      } else {
-        nextCat.parts.forEach((part) => {
-          part.position.x += deltaX;
-          part.position.z += deltaZ;
-          part.setEnabled(true);
-          shadowGenerator.addShadowCaster(part);
-        });
-      }
+    const [localX, localZ] = slots[housedInBarn];
+    const radians = (barn.rotation * Math.PI) / 180;
 
-      nextCat.x = targetX;
-      nextCat.z = targetZ;
-      nextCat.housed = true;
-      nextCat.barnIndex = barnIndex;
+    const targetX =
+      barn.x + localX * Math.cos(radians) -
+      localZ * Math.sin(radians);
+    const targetZ =
+      barn.z + localX * Math.sin(radians) +
+      localZ * Math.cos(radians);
 
-      catsHousedCount += 1;
-      setCatsHoused(catsHousedCount);
-      setMessage(
-        `${nextCat.name} is now visible in Barn ${barnIndex + 1}! Ã°Å¸ÂË†Ã°Å¸ÂÂ `
-      );
-    };
+    const deltaX = targetX - nextCat.x;
+    const deltaZ = targetZ - nextCat.z;
 
-    houseCatActionRef.current = houseOneCat;
+    if (nextCat.modelRoot) {
+      nextCat.modelRoot.position.set(targetX, 0, targetZ);
+      nextCat.modelRoot.rotation.y = nextCat.yaw;
+      nextCat.modelRoot.setEnabled(true);
+    } else {
+      nextCat.parts.forEach((part) => {
+        part.position.x += deltaX;
+        part.position.z += deltaZ;
+        part.setEnabled(true);
+        shadowGenerator.addShadowCaster(part);
+      });
+    }
 
-  
-    const fireProjectile = () => {
-      if (buildMode !== "none") return;
+    nextCat.x = targetX;
+    nextCat.z = targetZ;
+    nextCat.housed = true;
+    nextCat.barnIndex = barnIndex;
 
-      if (manaCount < 1) {
-        setMessage("You need 1 mana to cast a magic bolt. Find a blue crystal!");
+    catsHousedCount += 1;
+    setCatsHoused(catsHousedCount);
+    setMessage(
+      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! 🐈🏠`
+    );
+  };
+
+  houseCatActionRef.current = houseOneCat;
+
+  const fireProjectile = () => {
+    if (buildMode !== "none") return;
+
+    if (manaCount < 1) {
+      setMessage("You need 1 mana to cast a magic bolt. Find a blue crystal!");
+      return;
+    }
+
+    switchTigerModelAnimation("cast");
+    manaCount -= 1;
+    setMana(manaCount);
+
+    // Match the attack direction to Tiger's facing.
+    const dx = Math.sin(tiger.rotation.y);
+    const dz = Math.cos(tiger.rotation.y);
+    const angle = Math.atan2(dx, dz);
+
+    const projectile = MeshBuilder.CreateBox(
+      `MagicBolt${performance.now()}`,
+      { width: 0.18, height: 0.18, depth: 0.85 },
+      scene
+    );
+
+    const boltMaterial = new StandardMaterial(
+      `MagicBoltMaterial${performance.now()}`,
+      scene
+    );
+
+    boltMaterial.diffuseColor = new Color3(0.35, 0.85, 1);
+    boltMaterial.emissiveColor = new Color3(0.2, 0.8, 1);
+    boltMaterial.specularColor = new Color3(1, 1, 1);
+    boltMaterial.disableLighting = true;
+
+    projectile.material = boltMaterial;
+    projectile.isPickable = false;
+
+    // Spawn ahead of Tiger, aligned horizontally with the attack.
+    projectile.position.set(
+      tiger.position.x + dx * 1.0,
+      1.05,
+      tiger.position.z + dz * 1.0
+    );
+
+    projectile.rotation.set(0, angle, 0);
+
+    projectiles.push({
+      mesh: projectile,
+      x: projectile.position.x,
+      z: projectile.position.z,
+      vx: dx * 0.42,
+      vz: dz * 0.42,
+      life: 65,
+    });
+
+    setMessage("Magic bolt cast! Hit a slime to protect the yard.");
+  };
+
+  // World placement limits: keep large builds and tile edges
+  // slightly inside the expanded ground footprint.
+  const WORLD_MIN_X = -38;
+  const WORLD_MAX_X = 118;
+  const WORLD_MIN_Z = -48;
+  const WORLD_MAX_Z = 48;
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const key = event.key.toLowerCase();
+
+    if (
+      ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)
+    ) {
+      event.preventDefault();
+    }
+
+    if (event.repeat) return;
+
+    if (buildMode !== "none") {
+      if (key === "escape") {
+        setMode("none");
+        ghostParts.forEach((part) => part.setEnabled(false));
+        clearRoadPreview();
+        clearWaterPreview();
+        setMessage("Placement cancelled. Keep exploring!");
         return;
       }
 
-      switchTigerModelAnimation("cast");
-      manaCount -= 1;
-      setMana(manaCount);
-
-      // Match the attack direction to Tiger's facing.
-      const dx = Math.sin(tiger.rotation.y);
-      const dz = Math.cos(tiger.rotation.y);
-      const angle = Math.atan2(dx, dz);
-
-      const projectile = MeshBuilder.CreateBox(
-        `MagicBolt${performance.now()}`,
-        { width: 0.18, height: 0.18, depth: 0.85 },
-        scene
-      );
-
-      const boltMaterial = new StandardMaterial(
-        `MagicBoltMaterial${performance.now()}`,
-        scene
-      );
-
-      boltMaterial.diffuseColor = new Color3(0.35, 0.85, 1);
-      boltMaterial.emissiveColor = new Color3(0.2, 0.8, 1);
-      boltMaterial.specularColor = new Color3(1, 1, 1);
-      boltMaterial.disableLighting = true;
-
-      projectile.material = boltMaterial;
-      projectile.isPickable = false;
-
-      // Spawn ahead of Tiger, aligned horizontally with the attack.
-      projectile.position.set(
-        tiger.position.x + dx * 1.0,
-        1.05,
-        tiger.position.z + dz * 1.0
-      );
-
-      // The bolt's long Z axis now points in the travel direction.
-      projectile.rotation.set(0, angle, 0);
-
-      projectiles.push({
-        mesh: projectile,
-        x: projectile.position.x,
-        z: projectile.position.z,
-        vx: dx * 0.42,
-        vz: dz * 0.42,
-        life: 65,
-      });
-
-      setMessage("Magic bolt cast! Hit a slime to protect the yard.");
-    };
-
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase();
-
-      if (
-        ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)
-      ) {
-        event.preventDefault();
-      }
-
-      if (event.repeat) return;
-
-      if (buildMode !== "none") {
-        if (key === "escape") {
+      if (buildMode === "barn") {
+        if (key === "b") {
           setMode("none");
           ghostParts.forEach((part) => part.setEnabled(false));
-          clearRoadPreview();
-          clearWaterPreview();
-          setMessage("Placement cancelled. Keep exploring!");
+          setMessage("Barn placement cancelled.");
           return;
         }
 
-        if (buildMode === "barn") {
-          if (key === "b") {
-            setMode("none");
-            ghostParts.forEach((part) => part.setEnabled(false));
-            setMessage("Barn placement cancelled.");
-            return;
-          }
-
-          if (key === "q" || key === "r") {
-            barnRotation =
-              (barnRotation + (key === "r" ? 90 : 270)) % 360;
-            updateBarnPreview();
-            return;
-          }
-
-          if (key === "arrowup" || key === "w") buildZ -= 1;
-          else if (key === "arrowdown" || key === "s") buildZ += 1;
-          else if (key === "arrowleft" || key === "a") buildX -= 1;
-          else if (key === "arrowright" || key === "d") buildX += 1;
-          else if (key === "enter") {
-            if (woodCount < 5 || stoneCount < 3) {
-              setMessage("A barn needs 5 wood and 3 stone.");
-              return;
-            }
-
-            const tooCloseToTiger =
-              Math.hypot(
-                buildX - tiger.position.x,
-                buildZ - tiger.position.z
-              ) < 2.5;
-
-            const tooCloseToHouse =
-              Math.hypot(buildX, buildZ - 8) < 5;
-
-            const tooCloseToAnotherBarn = barns.some(
-              (barn) => Math.hypot(buildX - barn.x, buildZ - barn.z) < 5
-            );
-
-            if (tooCloseToTiger || tooCloseToHouse || tooCloseToAnotherBarn) {
-              setMessage(
-                "Move the barn away from Tiger, the house, and other barns."
-              );
-              return;
-            }
-
-            const newBarn = makeBarn(
-              buildX,
-              buildZ,
-              barnRotation,
-              barns.length
-            );
-
-            barns.push(newBarn);
-
-            woodCount -= 5;
-            stoneCount -= 3;
-            setWood(woodCount);
-            setStone(stoneCount);
-
-            setBarnBuilt(true);
-            setBarnCount(barns.length);
-
-            setMode("none");
-            ghostParts.forEach((part) => part.setEnabled(false));
-
-            setMessage(
-              `Barn ${barns.length} built! You can build more barns whenever you have enough resources.`
-            );
-            return;
-          } else {
-            return;
-          }
-
-          buildX = Math.max(-35, Math.min(35, buildX));
-          buildZ = Math.max(-35, Math.min(35, buildZ));
+        if (key === "q" || key === "r") {
+          barnRotation =
+            (barnRotation + (key === "r" ? 90 : 270)) % 360;
           updateBarnPreview();
           return;
         }
 
-        if (buildMode === "road") {
-          if (key === "t") {
-            setMode("none");
-            clearRoadPreview();
-            setMessage("Road placement cancelled.");
+        if (key === "arrowup" || key === "w") buildZ -= 1;
+        else if (key === "arrowdown" || key === "s") buildZ += 1;
+        else if (key === "arrowleft" || key === "a") buildX -= 1;
+        else if (key === "arrowright" || key === "d") buildX += 1;
+        else if (key === "enter") {
+          if (woodCount < 5 || stoneCount < 3) {
+            setMessage("A barn needs 5 wood and 3 stone.");
             return;
           }
 
-          if (key === "q" || key === "r") {
-            roadRotation =
-              (roadRotation + (key === "r" ? 90 : 270)) % 360;
-            updateRoadPreview();
-            return;
-          }
+          const tooCloseToTiger =
+            Math.hypot(
+              buildX - tiger.position.x,
+              buildZ - tiger.position.z
+            ) < 2.5;
 
-          if (key === "arrowup" || key === "w") roadZ -= 2;
-          else if (key === "arrowdown" || key === "s") roadZ += 2;
-          else if (key === "arrowleft" || key === "a") roadX -= 2;
-          else if (key === "arrowright" || key === "d") roadX += 2;
-          else if (key === "enter") {
-            if (woodCount < 1 || stoneCount < 2) {
-              setMessage("A road tile needs 1 wood and 2 stone.");
-              return;
-            }
+          const tooCloseToHouse =
+            Math.hypot(buildX, buildZ - 8) < 5;
 
-            const occupied = roadTiles.some(
-              (tile) =>
-                Math.abs(tile.x - roadX) < 0.5 &&
-                Math.abs(tile.z - roadZ) < 0.5
-            );
+          const tooCloseToAnotherBarn = barns.some(
+            (barn) => Math.hypot(buildX - barn.x, buildZ - barn.z) < 5
+          );
 
-            if (occupied) {
-              setMessage("There's already a road tile here.");
-              return;
-            }
-
-            createRoadTile(
-              roadX,
-              roadZ,
-              roadRotation,
-              `RoadTile${roadTiles.length}`,
-              false
-            );
-            roadTiles.push({
-              x: roadX,
-              z: roadZ,
-              rotation: roadRotation,
-            });
-
-            woodCount -= 1;
-            stoneCount -= 2;
-            setWood(woodCount);
-            setStone(stoneCount);
-            setRoadCount(roadTiles.length);
+          if (tooCloseToTiger || tooCloseToHouse || tooCloseToAnotherBarn) {
             setMessage(
-              `Road tile placed! You have built ${roadTiles.length} road tile(s).`
+              "Move the barn away from Tiger, the house, and other barns."
             );
-
-            updateRoadPreview();
-            return;
-          } else {
             return;
           }
 
-          roadX = Math.max(-37, Math.min(37, roadX));
-          roadZ = Math.max(-37, Math.min(37, roadZ));
+          const newBarn = makeBarn(
+            buildX,
+            buildZ,
+            barnRotation,
+            barns.length
+          );
+
+          barns.push(newBarn);
+
+          woodCount -= 5;
+          stoneCount -= 3;
+          setWood(woodCount);
+          setStone(stoneCount);
+
+          setBarnBuilt(true);
+          setBarnCount(barns.length);
+
+          setMode("none");
+          ghostParts.forEach((part) => part.setEnabled(false));
+
+          setMessage(
+            `Barn ${barns.length} built! You can build more barns whenever you have enough resources.`
+          );
+          return;
+        } else {
+          return;
+        }
+
+        buildX = Math.max(
+          WORLD_MIN_X,
+          Math.min(WORLD_MAX_X, buildX)
+        );
+        buildZ = Math.max(
+          WORLD_MIN_Z,
+          Math.min(WORLD_MAX_Z, buildZ)
+        );
+        updateBarnPreview();
+        return;
+      }
+
+      if (buildMode === "road") {
+        if (key === "t") {
+          setMode("none");
+          clearRoadPreview();
+          setMessage("Road placement cancelled.");
+          return;
+        }
+
+        if (key === "q" || key === "r") {
+          roadRotation =
+            (roadRotation + (key === "r" ? 90 : 270)) % 360;
           updateRoadPreview();
           return;
         }
 
-        if (buildMode === "water") {
-          if (key === "y") {
-            setMode("none");
-            clearWaterPreview();
-            setMessage("Water-block placement cancelled.");
+        if (key === "arrowup" || key === "w") roadZ -= 2;
+        else if (key === "arrowdown" || key === "s") roadZ += 2;
+        else if (key === "arrowleft" || key === "a") roadX -= 2;
+        else if (key === "arrowright" || key === "d") roadX += 2;
+        else if (key === "enter") {
+          if (woodCount < 1 || stoneCount < 2) {
+            setMessage("A road tile needs 1 wood and 2 stone.");
             return;
           }
-          if (key === "arrowup" || key === "w") waterZ -= 2;
-          else if (key === "arrowdown" || key === "s") waterZ += 2;
-          else if (key === "arrowleft" || key === "a") waterX -= 2;
-          else if (key === "arrowright" || key === "d") waterX += 2;
-          else if (key === "enter") {
-            if (manaCount < 1 || stoneCount < 2) {
-              setMessage(`Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`);
-              return;
-            }
-            const occupied = waterTiles.some((tile) => Math.abs(tile.x - waterX) < 1.5 && Math.abs(tile.z - waterZ) < 1.5)
-              || roadTiles.some((tile) => Math.abs(tile.x - waterX) < 1.2 && Math.abs(tile.z - waterZ) < 1.2);
-            if (occupied) {
-              setMessage("That spot is occupied. Place water beside the road or another water block.");
-              return;
-            }
-            const parts = createWaterTile(waterX, waterZ, `WaterBlock${waterTiles.length}`, false);
-            parts.forEach((part) => shadowGenerator.addShadowCaster(part));
-            waterTiles.push({ x: waterX, z: waterZ, parts });
-            manaCount -= 1;
-            stoneCount -= 2;
-            setMana(manaCount);
-            setStone(stoneCount);
-            setWaterCount(waterTiles.length);
-            setMessage(`Water block placed! ${waterTiles.length} water block(s) built.`);
-            waterX = Math.min(37, waterX + 2);
-            updateWaterPreview();
-            return;
-          } else {
+
+          const occupied = roadTiles.some(
+            (tile) =>
+              Math.abs(tile.x - roadX) < 0.5 &&
+              Math.abs(tile.z - roadZ) < 0.5
+          );
+
+          if (occupied) {
+            setMessage("There's already a road tile here.");
             return;
           }
-          waterX = Math.max(-37, Math.min(37, waterX));
-          waterZ = Math.max(-37, Math.min(37, waterZ));
-          updateWaterPreview();
+
+          createRoadTile(
+            roadX,
+            roadZ,
+            roadRotation,
+            `RoadTile${roadTiles.length}`,
+            false
+          );
+
+          roadTiles.push({
+            x: roadX,
+            z: roadZ,
+            rotation: roadRotation,
+          });
+
+          woodCount -= 1;
+          stoneCount -= 2;
+          setWood(woodCount);
+          setStone(stoneCount);
+          setRoadCount(roadTiles.length);
+          setMessage(
+            `Road tile placed! You have built ${roadTiles.length} road tile(s).`
+          );
+
+          updateRoadPreview();
+          return;
+        } else {
           return;
         }
-      }
 
-      if (
-        [
-          "arrowup", "arrowdown", "arrowleft", "arrowright",
-          "w", "a", "s", "d", " ", "shift"
-        ].includes(key)
-      ) {
-        keys.add(key);
-      }
-
-      if (key === "f") {
-        fireProjectile();
+        roadX = Math.max(
+          WORLD_MIN_X,
+          Math.min(WORLD_MAX_X, roadX)
+        );
+        roadZ = Math.max(
+          WORLD_MIN_Z,
+          Math.min(WORLD_MAX_Z, roadZ)
+        );
+        updateRoadPreview();
         return;
       }
 
+      if (buildMode === "water") {
+        if (key === "y") {
+          setMode("none");
+          clearWaterPreview();
+          setMessage("Water-block placement cancelled.");
+          return;
+        }
+
+        if (key === "arrowup" || key === "w") waterZ -= 2;
+        else if (key === "arrowdown" || key === "s") waterZ += 2;
+        else if (key === "arrowleft" || key === "a") waterX -= 2;
+        else if (key === "arrowright" || key === "d") waterX += 2;
+        else if (key === "enter") {
+          if (manaCount < 1 || stoneCount < 2) {
+            setMessage(
+              `Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`
+            );
+            return;
+          }
+
+          const occupied =
+            waterTiles.some(
+              (tile) =>
+                Math.abs(tile.x - waterX) < 1.5 &&
+                Math.abs(tile.z - waterZ) < 1.5
+            ) ||
+            roadTiles.some(
+              (tile) =>
+                Math.abs(tile.x - waterX) < 1.2 &&
+                Math.abs(tile.z - waterZ) < 1.2
+            );
+
+          if (occupied) {
+            setMessage(
+              "That spot is occupied. Place water beside the road or another water block."
+            );
+            return;
+          }
+
+          const parts = createWaterTile(
+            waterX,
+            waterZ,
+            `WaterBlock${waterTiles.length}`,
+            false
+          );
+
+          parts.forEach((part) => shadowGenerator.addShadowCaster(part));
+          waterTiles.push({ x: waterX, z: waterZ, parts });
+
+          manaCount -= 1;
+          stoneCount -= 2;
+          setMana(manaCount);
+          setStone(stoneCount);
+          setWaterCount(waterTiles.length);
+
+          setMessage(
+            `Water block placed! ${waterTiles.length} water block(s) built.`
+          );
+
+          waterX = Math.min(WORLD_MAX_X - 2, waterX + 2);
+          updateWaterPreview();
+          return;
+        } else {
+          return;
+        }
+
+        waterX = Math.max(
+          WORLD_MIN_X,
+          Math.min(WORLD_MAX_X - 2, waterX)
+        );
+        waterZ = Math.max(
+          WORLD_MIN_Z,
+          Math.min(WORLD_MAX_Z - 2, waterZ)
+        );
+        updateWaterPreview();
+        return;
+      }
+    }
+
+    if (
+      [
+        "arrowup", "arrowdown", "arrowleft", "arrowright",
+        "w", "a", "s", "d", " ", "shift"
+      ].includes(key)
+    ) {
+      keys.add(key);
+    }
+
+    if (key === "f") {
+      fireProjectile();
+      return;
+    }
+
+    
       // H KEY: HOUSE THE NEXT RESCUED CAT.
       if (key === "h") {
         houseOneCat();
@@ -3532,7 +3684,6 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           return;
         }
 
-        
         // Collect the closest available resource.
         let closestResource: Resource | null = null;
         let closestResourceDistance = Infinity;
@@ -3571,7 +3722,6 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
         }
       }
 
-
       if (key === "b") {
         if (woodCount < 5 || stoneCount < 3) {
           setMessage(
@@ -3587,7 +3737,9 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
         updateBarnPreview();
         ghostParts.forEach((part) => part.setEnabled(true));
         setMode("barn");
-        setMessage("Place another barn: move with WASD, rotate with Q/R, Enter builds.");
+        setMessage(
+          "Place another barn: move with WASD, rotate with Q/R, Enter builds."
+        );
         return;
       }
 
@@ -3603,19 +3755,27 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
         setMode("road");
         updateRoadPreview();
-        setMessage("Place a road tile: move with WASD, rotate with Q/R, Enter places.");
+        setMessage(
+          "Place a road tile: move with WASD, rotate with Q/R, Enter places."
+        );
+        return;
       }
 
       if (key === "y") {
         if (manaCount < 1 || stoneCount < 2) {
-          setMessage(`Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`);
+          setMessage(
+            `Water-block recipe: 1 mana + 2 stone. You have ${manaCount} mana and ${stoneCount} stone.`
+          );
           return;
         }
+
         waterX = Math.round(tiger.position.x + 2);
         waterZ = Math.round(tiger.position.z);
         setMode("water");
         updateWaterPreview();
-        setMessage("Place water blocks: move with WASD, Enter places a block, Y cancels.");
+        setMessage(
+          "Place water blocks: move with WASD, Enter places a block, Y cancels."
+        );
       }
     };
 
@@ -3671,6 +3831,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           const walkBounce = isWalking
             ? Math.abs(Math.sin(now / 88 + phase)) * 0.045
             : Math.sin(now / 620 + phase) * 0.012;
+
           part.position.x = cat.x + offset.x * cos + offset.z * sin;
           part.position.y = offset.y + walkBounce;
           part.position.z = cat.z - offset.x * sin + offset.z * cos;
@@ -3679,12 +3840,15 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           // Tiny idle animations make each kitten feel alive without adding
           // extra meshes or expensive animation systems.
           if (part.name.includes("Tail")) {
-            part.rotation.z = Math.PI / 3 + Math.sin(now / 360 + phase) * 0.22;
+            part.rotation.z =
+              Math.PI / 3 + Math.sin(now / 360 + phase) * 0.22;
           } else if (part.name.includes("Eye")) {
-            const blinkCycle = (now + Math.abs(cat.x * 173 + cat.z * 91)) % 3600;
-            const blink = blinkCycle > 0 && blinkCycle < 145
-              ? Math.max(0.12, Math.abs(blinkCycle - 72.5) / 72.5)
-              : 1;
+            const blinkCycle =
+              (now + Math.abs(cat.x * 173 + cat.z * 91)) % 3600;
+            const blink =
+              blinkCycle > 0 && blinkCycle < 145
+                ? Math.max(0.12, Math.abs(blinkCycle - 72.5) / 72.5)
+                : 1;
             part.scaling.y = blink;
           }
         });
@@ -3701,15 +3865,20 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
       updateCats(dt, now);
 
-     if (buildMode === "none" && tigerModelLoaded) {
+      if (buildMode === "none" && tigerModelLoaded) {
         const sprinting = keys.has("shift");
         const moveSpeed = (sprinting ? 0.216 : 0.12) * dt;
         let moveX = 0;
         let moveZ = 0;
 
         const verticalDirection = invertedMovementRef.current ? -1 : 1;
-        if (keys.has("arrowup") || keys.has("w")) moveZ -= verticalDirection;
-        if (keys.has("arrowdown") || keys.has("s")) moveZ += verticalDirection;
+
+        if (keys.has("arrowup") || keys.has("w")) {
+          moveZ -= verticalDirection;
+        }
+        if (keys.has("arrowdown") || keys.has("s")) {
+          moveZ += verticalDirection;
+        }
         if (keys.has("arrowleft") || keys.has("a")) moveX -= 1;
         if (keys.has("arrowright") || keys.has("d")) moveX += 1;
 
@@ -3738,28 +3907,51 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
             isGrounded = true;
           }
         }
-    
-            tiger.position.x = Math.max(-38, Math.min(118, tiger.position.x));
-            tiger.position.z = Math.max(-48, Math.min(48, tiger.position.z));
-      }
 
+        // Keep player movement aligned with the expanded world boundaries.
+        tiger.position.x = Math.max(
+          WORLD_MIN_X,
+          Math.min(WORLD_MAX_X, tiger.position.x)
+        );
+        tiger.position.z = Math.max(
+          WORLD_MIN_Z,
+          Math.min(WORLD_MAX_Z, tiger.position.z)
+        );
+      }
+    
       // Fluid, visible kid locomotion. Blend movement in/out so limbs ease into
       // a stride instead of snapping, while arms and legs counter-swing naturally.
-      const tigerMoving = buildMode === "none" &&
-        (keys.has("arrowup") || keys.has("w") || keys.has("arrowdown") || keys.has("s") ||
-         keys.has("arrowleft") || keys.has("a") || keys.has("arrowright") || keys.has("d"));
+      const tigerMoving =
+        buildMode === "none" &&
+        (keys.has("arrowup") ||
+          keys.has("w") ||
+          keys.has("arrowdown") ||
+          keys.has("s") ||
+          keys.has("arrowleft") ||
+          keys.has("a") ||
+          keys.has("arrowright") ||
+          keys.has("d"));
+
       const tigerAirborne = !isGrounded;
       const blendTarget = tigerMoving && !tigerAirborne ? 1 : 0;
-      tigerMotionBlend += (blendTarget - tigerMotionBlend) * Math.min(1, dt * 0.22);
+
+      tigerMotionBlend +=
+        (blendTarget - tigerMotionBlend) * Math.min(1, dt * 0.22);
       tigerWalkPhase += dt * (0.045 + tigerMotionBlend * 0.255);
+
       const stride = Math.sin(tigerWalkPhase);
       const oppositeStride = Math.sin(tigerWalkPhase + Math.PI);
-      const bodyBob = tigerMotionBlend > 0.02
-        ? Math.abs(Math.sin(tigerWalkPhase * 2)) * 0.075 * tigerMotionBlend
-        : Math.sin(now * 0.0021) * 0.018;
+
+      const bodyBob =
+        tigerMotionBlend > 0.02
+          ? Math.abs(Math.sin(tigerWalkPhase * 2)) *
+            0.075 *
+            tigerMotionBlend
+          : Math.sin(now * 0.0021) * 0.018;
 
       // Only add a grounded bounce; jumping continues to use the existing physics.
       if (isGrounded) tiger.position.y = 0.8 + bodyBob;
+
       tiger.rotation.z = tigerAirborne
         ? -0.055
         : stride * 0.065 * tigerMotionBlend;
@@ -3767,50 +3959,70 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       tigerArmPivots.forEach((pivot, index) => {
         const side = index === 0 ? -1 : 1;
         const armStride = index === 0 ? stride : oppositeStride;
-        const relaxedSway = Math.sin(now * 0.0018 + index * Math.PI) * 0.045;
+        const relaxedSway =
+          Math.sin(now * 0.0018 + index * Math.PI) * 0.045;
+
         pivot.rotation.x = tigerAirborne
           ? -0.72
-          : armStride * 1.08 * tigerMotionBlend + relaxedSway * (1 - tigerMotionBlend);
-        pivot.rotation.z = side * (-0.09 + Math.abs(armStride) * 0.075 * tigerMotionBlend);
+          : armStride * 1.08 * tigerMotionBlend +
+            relaxedSway * (1 - tigerMotionBlend);
+
+        pivot.rotation.z =
+          side * (-0.09 + Math.abs(armStride) * 0.075 * tigerMotionBlend);
       });
+
       tigerLegPivots.forEach((pivot, index) => {
         const side = index === 0 ? -1 : 1;
         const legStride = index === 0 ? oppositeStride : stride;
+
         pivot.rotation.x = tigerAirborne
-          ? (side < 0 ? -0.34 : 0.48)
+          ? side < 0
+            ? -0.34
+            : 0.48
           : legStride * 0.86 * tigerMotionBlend;
+
         // Lift each foot clearly during its forward swing for a readable stride.
-        pivot.position.y = -0.36 + Math.max(0, Math.sin(tigerWalkPhase + (index === 0 ? Math.PI : 0)))
-          * 0.105 * tigerMotionBlend;
+        pivot.position.y =
+          -0.36 +
+          Math.max(
+            0,
+            Math.sin(tigerWalkPhase + (index === 0 ? Math.PI : 0))
+          ) *
+            0.105 *
+            tigerMotionBlend;
       });
+
       tigerHead.rotation.z = tigerAirborne
         ? 0.045
-        : Math.sin(tigerWalkPhase * 2) * 0.055 * tigerMotionBlend
-          + Math.sin(now * 0.0015) * 0.018 * (1 - tigerMotionBlend);
-      tigerHead.rotation.x = tigerAirborne ? -0.075 : Math.sin(tigerWalkPhase) * 0.03 * tigerMotionBlend
-        + Math.sin(now * 0.0012) * 0.012 * (1 - tigerMotionBlend);
+        : Math.sin(tigerWalkPhase * 2) * 0.055 * tigerMotionBlend +
+          Math.sin(now * 0.0015) * 0.018 * (1 - tigerMotionBlend);
 
-      // Keep the real 3D model aligned with the invisible gameplay root. The
-      // root's y=0.8 baseline represents standing on the ground.
+      tigerHead.rotation.x = tigerAirborne
+        ? -0.075
+        : Math.sin(tigerWalkPhase) * 0.03 * tigerMotionBlend +
+          Math.sin(now * 0.0012) * 0.012 * (1 - tigerMotionBlend);
+
+      // Keep the real 3D model aligned with the invisible gameplay root.
+      // The root's y=0.8 baseline represents standing on the ground.
       tigerVisualRoot.position.x = tiger.position.x;
       tigerVisualRoot.position.y = tiger.position.y - 0.8;
       tigerVisualRoot.position.z = tiger.position.z;
       tigerVisualRoot.rotation.y = tiger.rotation.y + Math.PI;
       tigerVisualRoot.rotation.z = tiger.rotation.z;
-      
-   if (tigerIsCasting) {
-  tigerCastSecondsRemaining -= dt / 60;
 
-  if (tigerCastSecondsRemaining <= 0) {
-    tigerIsCasting = false;
-    tigerCastSecondsRemaining = 0;
+      if (tigerIsCasting) {
+        tigerCastSecondsRemaining -= dt / 60;
 
-    // Stop the cast and let the normal controller choose
-    // the correct animation for Tiger's current state.
-    tigerModelAnimations.forEach((group) => group.stop());
-    activeTigerAnimation = "";
-  }
-}
+        if (tigerCastSecondsRemaining <= 0) {
+          tigerIsCasting = false;
+          tigerCastSecondsRemaining = 0;
+
+          // Stop the cast and let the normal controller choose
+          // the correct animation for Tiger's current state.
+          tigerModelAnimations.forEach((group) => group.stop());
+          activeTigerAnimation = "";
+        }
+      }
 
       if (!tigerIsCasting) {
         if (tigerAirborne) {
@@ -3877,7 +4089,8 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       for (const heart of heartPickups) {
         if (heart.collected) continue;
 
-        const bob = Math.sin(now * 0.004 + heart.x * 0.7 + heart.z * 0.3) * 0.13;
+        const bob =
+          Math.sin(now * 0.004 + heart.x * 0.7 + heart.z * 0.3) * 0.13;
 
         heart.parts.forEach((part, index) => {
           part.position.y = heart.baseY[index] + bob;
@@ -3896,7 +4109,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! Ã¢ÂÂ¤Ã¯Â¸Â Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! ❤️ Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -3966,8 +4179,10 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
         if (
           hit ||
           projectile.life <= 0 ||
-          Math.abs(projectile.x) > 41 ||
-          Math.abs(projectile.z) > 41
+          Math.abs(projectile.x) > WORLD_MAX_X ||
+          projectile.x < WORLD_MIN_X ||
+          Math.abs(projectile.z) > WORLD_MAX_Z ||
+          projectile.z < WORLD_MIN_Z
         ) {
           projectile.mesh.dispose();
           projectiles.splice(i, 1);
@@ -4092,7 +4307,6 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           setHealth(healthCount);
         }
       }
-
       // Check the win condition.
       if (
         !gameWon &&
@@ -4493,7 +4707,8 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
             letterSpacing: "1.2px",
           }}
         >
-          MAIN QUEST
+          
+MAIN QUEST
         </span>
         <span
           style={{
@@ -4586,19 +4801,20 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       </span>
     </div>
 
-  {/* ACTIONS */}
-<div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-  <button
-    onClick={(event) => {
-     event.currentTarget.blur();
-            }}
+    {/* ACTIONS */}
+    <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+      <button
+        onClick={(event) => {
+          event.currentTarget.blur();
+        }}
         style={{
           width: "100%",
           minHeight: 42,
           padding: "10px 12px",
           borderRadius: 13,
           border: "1px solid rgba(34,211,238,.24)",
-          background: "linear-gradient(110deg,rgba(8,145,178,.24),rgba(79,70,229,.20))",
+          background:
+            "linear-gradient(110deg,rgba(8,145,178,.24),rgba(79,70,229,.20))",
           color: "#cffafe",
           fontSize: 12,
           fontWeight: 850,
@@ -4665,7 +4881,8 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       padding: 15,
       borderRadius: 20,
       border: "1px solid rgba(148,163,184,.18)",
-      background: "linear-gradient(145deg,rgba(9,18,34,.86),rgba(12,24,43,.72))",
+      background:
+        "linear-gradient(145deg,rgba(9,18,34,.58),rgba(12,24,43,.42))",
       backdropFilter: "blur(20px)",
       WebkitBackdropFilter: "blur(20px)",
       boxShadow: "0 18px 55px rgba(0,0,0,.25)",
