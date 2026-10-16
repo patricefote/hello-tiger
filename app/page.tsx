@@ -3029,6 +3029,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
     houseCatActionRef.current = houseOneCat;
 
+  
     const fireProjectile = () => {
       if (buildMode !== "none") return;
 
@@ -3041,12 +3042,14 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       manaCount -= 1;
       setMana(manaCount);
 
+      // Match the attack direction to Tiger's facing.
       const dx = Math.sin(tiger.rotation.y);
       const dz = Math.cos(tiger.rotation.y);
+      const angle = Math.atan2(dx, dz);
 
       const projectile = MeshBuilder.CreateBox(
         `MagicBolt${performance.now()}`,
-        { width: 0.16, height: 0.72, depth: 0.16 },
+        { width: 0.18, height: 0.18, depth: 0.85 },
         scene
       );
 
@@ -3056,20 +3059,22 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       );
 
       boltMaterial.diffuseColor = new Color3(0.35, 0.85, 1);
-      boltMaterial.emissiveColor = new Color3(0.15, 0.65, 1);
+      boltMaterial.emissiveColor = new Color3(0.2, 0.8, 1);
+      boltMaterial.specularColor = new Color3(1, 1, 1);
       boltMaterial.disableLighting = true;
 
       projectile.material = boltMaterial;
       projectile.isPickable = false;
 
+      // Spawn ahead of Tiger, aligned horizontally with the attack.
       projectile.position.set(
-        tiger.position.x + dx * 0.85,
+        tiger.position.x + dx * 1.0,
         1.05,
-        tiger.position.z + dz * 0.85
+        tiger.position.z + dz * 1.0
       );
 
-      // Keep the bolt upright and visible while it travels forward.
-      projectile.rotation.z = 0;
+      // The bolt's long Z axis now points in the travel direction.
+      projectile.rotation.set(0, angle, 0);
 
       projectiles.push({
         mesh: projectile,
@@ -3082,6 +3087,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
       setMessage("Magic bolt cast! Hit a slime to protect the yard.");
     };
+
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
