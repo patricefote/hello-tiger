@@ -1022,7 +1022,6 @@ console.log(
       }
     })();
 
-
     // Shared wind animation registry for foliage and ground plants.
     // Very subtle motion adds life without creating per-frame allocations.
     const windSwayMeshes: {
