@@ -551,23 +551,23 @@ export default function Home() {
     sunLight.position = new Vector3(10, 18, -10);
     sunLight.intensity = 1.0;
 
-    // Higher-resolution filtered shadows make characters and scenery feel grounded.
-    const shadowGenerator = new ShadowGenerator(2048, sunLight);
-    shadowGenerator.usePercentageCloserFiltering = true;
-    shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
-    shadowGenerator.setDarkness(0.22);
+// Higher-resolution filtered shadows make characters and scenery feel grounded.
+const shadowGenerator = new ShadowGenerator(2048, sunLight);
+shadowGenerator.usePercentageCloserFiltering = true;
+shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+shadowGenerator.setDarkness(0.22);
 
-    
+// Expanded terrain gives us room to expose more existing pickups
+// and build out the larger world without shifting its center.
 const ground = MeshBuilder.CreateGround(
   "Ground",
-  { width: 160, height: 100 },
+  { width: 400, height: 300 },
   scene
 );
 ground.position.x = 40;
 ground.material = grassMat;
 ground.isPickable = false;
 ground.receiveShadows = true;
-
 
     // LAKE: a natural-looking oval on the new eastern countryside.
     const lakeShoreMat = new StandardMaterial("LakeShoreMaterial", scene);
@@ -579,7 +579,7 @@ ground.receiveShadows = true;
       { diameter: 23, height: 0.12, tessellation: 64 },
       scene
     );
-    lakeShore.position.set(72, 0.035, 16);
+    lakeShore.position.set(52, 0.035, 16);
     lakeShore.scaling.z = 0.68;
     lakeShore.material = lakeShoreMat;
     lakeShore.isPickable = false;
@@ -597,16 +597,13 @@ ground.receiveShadows = true;
       { diameter: 20.5, height: 0.1, tessellation: 64 },
       scene
     );
-    lake.position.set(72, 0.12, 16);
+    lake.position.set(52, 0.12, 16);
     lake.scaling.z = 0.68;
     lake.material = lakeWaterMat;
     lake.isPickable = false;
     lake.receiveShadows = false;
-
-    
     
             // MEDIEVAL COUNTRYSIDE HOUSE
-        // Preserve the house and decorations while hiding the sand plane and horizon dome.
         void (async () => {
           try {
             const imported = await SceneLoader.ImportMeshAsync(
@@ -3305,12 +3302,13 @@ tigerModelAnimations.forEach((group) => group.stop());
     setMessage("Magic bolt cast! Hit a slime to protect the yard.");
   };
 
-  // World placement limits: keep large builds and tile edges
-  // slightly inside the expanded ground footprint.
-  const WORLD_MIN_X = -38;
-  const WORLD_MAX_X = 118;
-  const WORLD_MIN_Z = -48;
-  const WORLD_MAX_Z = 48;
+  // World placement limits: keep builds and tile edges
+  // inside the expanded 240 × 160 ground footprint.
+  // New exploration zones, and future quests.
+  const WORLD_MIN_X = -160;
+  const WORLD_MAX_X = 240;
+  const WORLD_MIN_Z = -150;
+  const WORLD_MAX_Z = 150;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     const key = event.key.toLowerCase();
