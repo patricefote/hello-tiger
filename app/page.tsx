@@ -981,29 +981,24 @@ console.log(
 
 const treePositions = [
   // Home area — keep a few trees near spawn
-  [-11, -7], [11, -8], [-12, 5], [11, 3],
-  [-3, -12], [5, -12], [14, 9],
-
+  [-28, -7], 
   // Western woodland
-  [-22, -17], [-32, -11], [-39, 3],
-  [-34, 20], [-25, 32], [-12, 39],
-  [-39, -27],
+  [2, -17], [23, -1], [19, 3],
+  [-13, 37],
 
   // Northern woodland
-  [-19, -39], [0, -42], [18, -38],
-  [33, -33], [40, -20],
+  [-19, 25], [10, -2],
+  [13, -3],
 
   // Eastern woodland
-  [39, -7], [41, 10], [36, 27],
-  [25, 38], [9, 41],
+  [7, -13], [4, -3],
+  [-5, 28], [3, 41],
 
   // Southern woodland
-  [-30, 34], [-4, 39], [31, 32],
-  [20, 17], [30, 2], [19, -16],
+  [-3, 34], [-4, 29], 
 
   // Scattered interior trees
-  [-22, 2], [-17, 14], [-7, 23],
-  [7, 19], [0, -25], [-14, -22],
+  [-29, 12], [-7, 14], 
 ];
     treePositions.forEach(([x, z], i) => {
       // Slightly tapered trunks give each tree a more natural silhouette.
@@ -3479,7 +3474,8 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           return;
         }
 
-        // Collect the closest resource.
+        
+        // Collect the closest available resource.
         let closestResource: Resource | null = null;
         let closestResourceDistance = Infinity;
 
@@ -3497,9 +3493,9 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           }
         }
 
-        if (closestResource && closestResourceDistance < 1.9) {
+        if (closestResource && closestResourceDistance < 3.5) {
           closestResource.collected = true;
-          closestResource.mesh.setEnabled(true);
+          closestResource.mesh.setEnabled(false);
 
           if (closestResource.type === "wood") {
             woodCount += 1;
@@ -3512,10 +3508,11 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           }
         } else {
           setMessage(
-            "Get close to Milo, an unrescued cat, wood, or stone, then press E."
+            "Get closer to Milo, an unrescued cat, wood, or stone, then press E."
           );
         }
       }
+
 
       if (key === "b") {
         if (woodCount < 5 || stoneCount < 3) {
