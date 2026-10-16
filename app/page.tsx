@@ -4586,13 +4586,12 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       </span>
     </div>
 
-    {/* ACTIONS */}
-    <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
-      <button
-        ref={houseCatActionRef}
-        onClick={() => {
-          houseCatActionRef.current?.blur();
-        }}
+  {/* ACTIONS */}
+<div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+  <button
+    onClick={(event) => {
+     event.currentTarget.blur();
+            }}
         style={{
           width: "100%",
           minHeight: 42,
