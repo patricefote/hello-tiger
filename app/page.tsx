@@ -879,6 +879,91 @@ console.log(
     })();
 
     // Expanded tree locations.
+
+    
+   
+    // Low-poly forest and lake — imported world scenery.
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "low_poly_tree_scene_free.glb",
+          scene
+        );
+
+        const root =
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes[0];
+
+        if (!root) {
+          throw new Error("Forest scene GLB did not provide a root mesh.");
+        }
+
+        root.position.set(0, 0, 0);
+
+        // Fit the forest and lake to 75% of the previous 24-unit footprint.
+        const initialBounds = root.getHierarchyBoundingVectors(true);
+        const initialSize = initialBounds.max.subtract(initialBounds.min);
+        const largestDimension = Math.max(initialSize.x, initialSize.z);
+
+        if (largestDimension <= 0) {
+          throw new Error("Forest scene has invalid dimensions.");
+        }
+
+        const sceneScale = 52 / largestDimension;
+        root.scaling.setAll(sceneScale);
+
+        // Recalculate bounds after scaling.
+        const bounds = root.getHierarchyBoundingVectors(true);
+        const centerX = (bounds.min.x + bounds.max.x) / 2;
+        const centerZ = (bounds.min.z + bounds.max.z) / 2;
+
+        // Keep the forest and lake centered, but lower it into the ground.
+        const worldX = 24;
+        const worldZ = 24;
+        const groundOffset = -2;
+
+        root.position.set(
+          worldX - centerX,
+          -bounds.min.y + groundOffset,
+          worldZ - centerZ
+        );
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        // Inventory the imported meshes and materials for reuse.
+        const materialNames = new Set<string>();
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh.material) {
+            materialNames.add(mesh.material.name);
+          }
+        });
+
+        console.log("FOREST SCENE LOADED", {
+          meshCount: imported.meshes.length,
+          sceneScale,
+          bounds: initialSize.asArray(),
+          meshes: imported.meshes
+            .filter((mesh) => mesh.getTotalVertices() > 0)
+            .map((mesh) => ({
+              name: mesh.name,
+              material: mesh.material?.name ?? "none",
+              vertices: mesh.getTotalVertices(),
+            })),
+          materials: [...materialNames],
+        });
+      } catch (error) {
+        console.error("Failed to load forest and lake scene:", error);
+      }
+    })();
+
     // Shared wind animation registry for foliage and ground plants.
     // Very subtle motion adds life without creating per-frame allocations.
     const windSwayMeshes: {
@@ -4020,259 +4105,645 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
   }, []);
 
   return (
-    <main ref={gameRootRef} className="relative h-[100dvh] min-h-0 w-screen overflow-hidden bg-sky-300">
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full touch-none outline-none"
-      />
+  
+<main
+  ref={gameRootRef}
+  className="relative h-screen w-screen overflow-hidden"
+  style={{
+    position: "fixed",
+    inset: 0,
+    width: "100vw",
+    height: "100dvh",
+    overflow: "hidden",
+    isolation: "isolate",
+    background: "#07111f",
+    color: "#f1f5f9",
+    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+  }}
+>
+  <canvas
+    ref={canvasRef}
+    className="outline-none"
+    style={{
+      position: "absolute",
+      inset: 0,
+      display: "block",
+      width: "100%",
+      height: "100%",
+      touchAction: "none",
+      zIndex: 0,
+    }}
+  />
 
-      <button
-        type="button"
-        onClick={() => void toggleFullscreen()}
-        aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        title={isFullscreen ? "Exit fullscreen (Esc)" : "Play fullscreen"}
-        className="absolute right-4 top-4 z-50 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/30 bg-slate-950/85 px-4 py-3 text-sm font-extrabold text-white shadow-xl backdrop-blur transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:right-6 sm:top-6"
-      >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 24 24"
-          className="h-5 w-5 shrink-0"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+  {/* FULLSCREEN */}
+  <button
+    onClick={toggleFullscreen}
+    style={{
+      position: "fixed",
+      top: 18,
+      right: 18,
+      zIndex: 1000,
+      width: 44,
+      height: 44,
+      display: "grid",
+      placeItems: "center",
+      borderRadius: 14,
+      border: "1px solid rgba(148,163,184,.22)",
+      background: "rgba(7,17,31,.78)",
+      color: "#e2e8f0",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      cursor: "pointer",
+      fontSize: 20,
+      boxShadow: "0 8px 24px rgba(0,0,0,.18)",
+    }}
+    aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+    title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+  >
+    {isFullscreen ? "↙" : "⛶"}
+  </button>
+
+  {/* LEFT HUD */}
+  <section
+    className="game-hud-scroll"
+    style={{
+      position: "fixed",
+      top: 18,
+      left: 18,
+      zIndex: 900,
+      width: 294,
+      maxWidth: "calc(100vw - 36px)",
+      maxHeight: "calc(100dvh - 36px)",
+      overflowY: "auto",
+      overflowX: "hidden",
+      padding: 16,
+      borderRadius: 22,
+      border: "1px solid rgba(148,163,184,.18)",
+      background: "linear-gradient(145deg, rgba(9,18,34,.88), rgba(12,24,43,.72))",
+      backdropFilter: "blur(22px)",
+      WebkitBackdropFilter: "blur(22px)",
+      boxShadow: "0 18px 55px rgba(0,0,0,.28)",
+    }}
+  >
+    {/* BRAND */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        marginBottom: 16,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+        <div
+          style={{
+            width: 42,
+            height: 42,
+            flexShrink: 0,
+            display: "grid",
+            placeItems: "center",
+            borderRadius: 14,
+            background: "linear-gradient(135deg,#22d3ee,#6366f1)",
+            color: "#07111f",
+            fontSize: 23,
+            boxShadow: "0 0 24px rgba(34,211,238,.22)",
+          }}
         >
-          {isFullscreen ? (
-            <>
-              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-              <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-              <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
-              <path d="M9 9 3 3" />
-              <path d="M15 9 21 3" />
-              <path d="m9 15-6 6" />
-              <path d="m15 15 6 6" />
-            </>
-          ) : (
-            <>
-              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-              <path d="M16 3h3a2 2 0 0 1 2 2v3" />
-              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-              <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
-            </>
-          )}
-        </svg>
-        <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
-      </button>
-
-      <div className="pointer-events-none absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-2xl border border-white/30 bg-slate-950/80 p-4 text-white shadow-xl sm:left-6 sm:top-6 sm:p-5">
-        <h1 className="text-2xl font-black tracking-wide sm:text-3xl">
-          HELLO TIGER!
-        </h1>
-
-        <p className="mt-1 text-sm font-semibold text-sky-200">
-          Magic, Monsters &amp; Cat Rescue
-        </p>
-
-        {gameWon && (
-          <div className="mt-3 rounded-xl border border-yellow-300/50 bg-yellow-400/20 p-3">
-            <div className="text-lg font-black text-yellow-200">
-              Ã°Å¸Ââ€  YOU DID IT, TIGER!
-            </div>
-            <div className="mt-1 text-sm">
-              All cats are safe and the yard is protected!
-            </div>
-          </div>
-        )}
-
-<div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Tiger health</div>
-   <div className="text-lg font-bold">{health}/13 {"\u{2764}\u{FE0F}"}</div>
-    <div className="text-xs text-slate-300">Find bonus hearts to heal</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Mana</div>
-    <div className="text-lg font-bold">{mana} {"\u{1F48E}"}</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Slimes defeated</div>
-    <div className="text-lg font-bold">{slimesDefeated}/4</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Magic charm</div>
-    <div className="text-lg font-bold">
-      {charmCrafted ? <>Crafted {"\u{2728}"}</> : "3 mana"}
-    </div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Cats rescued</div>
-    <div className="text-lg font-bold">
-      {catsRescued}/3 {"\u{1F408}"}
-    </div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Cats housed</div>
-    <div className="text-lg font-bold">
-      {catsHoused}/3 {"\u{1F3E0}"}
-    </div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Wood</div>
-    <div className="text-lg font-bold">{wood} {"\u{1FAB5}"}</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Stone</div>
-    <div className="text-lg font-bold">{stone} {"\u{1FAA8}"}</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Barns built</div>
-    <div className="text-lg font-bold">{barnCount} {"\u{1F3E0}"}</div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Road tiles</div>
-    <div className="text-lg font-bold">
-      {roadCount} {"\u{1F6E3}\u{FE0F}"}
-    </div>
-  </div>
-
-  <div className="rounded-xl bg-white/10 px-3 py-2">
-    <div className="text-xs text-slate-300">Water blocks</div>
-    <div className="text-lg font-bold">{waterCount} {"\u{1F4A7}"}</div>
-  </div>
-</div>
-
-<div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
-  <div className="text-xs text-slate-300">Milo&apos;s quest</div>
-  <div className="font-bold">
-    {questComplete
-      ? <>Complete! +3 bonus mana {"\u{2713}"}</>
-      : questStarted
-        ? `Defeat 3 slimes: ${Math.min(slimesDefeated, 3)}/3`
-        : "Find Milo and press E"}
-  </div>
-</div>
-
-<div className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm">
-  <div className="text-xs text-slate-300">Selected activity</div>
-  <div className="font-bold">
-    {mode === "barn"
-      ? "Place a barn"
-      : mode === "road"
-        ? "Build a road tile"
-        : mode === "water"
-          ? "Place a water block"
-          : "Explore and defend the yard"}
-  </div>
-</div>
-
-        <div className="pointer-events-auto mt-3 rounded-xl border border-amber-200/30 bg-amber-400/10 p-3">
-          <div className="text-xs text-amber-100">Cat care</div>
-          <div className="mt-1 text-sm font-bold">
-            {!barnBuilt
-              ? "Build a barn to house rescued cats."
-              : canHouseCat
-                ? `${catsRescued - catsHoused} rescued cat(s) ready for a home!`
-                : "Rescue a cat to make it available here."}
-          </div>
-
-          <button
-            type="button"
-            disabled={!canHouseCat}
-            onClick={() => houseCatActionRef.current?.()}
-            className="mt-2 w-full rounded-lg border border-amber-100/30 bg-amber-500 px-3 py-2 text-sm font-extrabold text-slate-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
+          🐯
+        </div>
+        <div>
+          <div
+            style={{
+              fontSize: 17,
+              fontWeight: 900,
+              letterSpacing: "-.6px",
+              lineHeight: 1.2,
+            }}
           >
-            House a Cat (H)
-          </button>
-        </div>
-
-        <div className="pointer-events-auto mt-3 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-          <div className="text-xs text-slate-300">Movement controls</div>
-          <div className="mt-1 flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-bold">Vertical movement</div>
-              <div className="text-xs text-slate-300">
-                {invertedMovement
-                  ? "Inverted: Up / W moves down"
-                  : "Normal: Up / W moves up"}
-              </div>
-            </div>
-            <button
-              type="button"
-              aria-pressed={invertedMovement}
-              onClick={() => {
-                const nextValue = !invertedMovement;
-                invertedMovementRef.current = nextValue;
-                setInvertedMovement(nextValue);
-              }}
-              className="shrink-0 rounded-lg border border-sky-200/40 bg-sky-500 px-3 py-2 text-xs font-bold text-white transition hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
-            >
-              {invertedMovement ? "Turn off" : "Invert"}
-            </button>
+            HELLO TIGER!
+          </div>
+          <div
+            style={{
+              marginTop: 4,
+              color: "#94a3b8",
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: "1.7px",
+            }}
+          >
+            ADVENTURE STATUS
           </div>
         </div>
-
-        <p className="mt-3 max-w-72 text-sm leading-relaxed text-white">
-          {message}
-        </p>
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 right-4 left-auto max-h-[45vh] w-[min(22rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-white/20 bg-slate-950/85 p-3 text-xs text-white shadow-xl sm:bottom-6 sm:right-6 sm:max-h-[55vh] sm:p-4 sm:text-sm">
-    {mode === "water" ? (
-      <>
-        <p className="mb-2 font-bold text-cyan-300">WATER-BLOCK MODE</p>
-        <p>Recipe: 1 mana + 2 stone per block</p>
-        <p>WASD / Arrows - Move water preview</p>
-        <p>Enter - Place block</p>
-        <p>Y / Escape - Exit</p>
-      </>
-    ) : mode === "road" ? (
-      <>
-        <p className="mb-2 font-bold text-cyan-300">ROAD-BUILDING MODE</p>
-        <p>Recipe: 1 wood + 2 stone per tile</p>
-        <p>WASD / Arrows - Move road preview</p>
-        <p>Q / R - Rotate</p>
-        <p>Enter - Place tile</p>
-        <p>T / Escape - Exit</p>
-      </>
-    ) : mode === "barn" ? (
-      <>
-        <p className="mb-2 font-bold text-cyan-300">BARN-PLACEMENT MODE</p>
-        <p>Recipe: 5 wood + 3 stone per barn</p>
-        <p>WASD / Arrows - Move barn</p>
-        <p>Q / R - Rotate</p>
-        <p>Enter - Build another barn</p>
-        <p>B / Escape - Cancel</p>
-      </>
-    ) : (
-      <>
-        <p className="mb-2 font-bold text-sky-200">HOW TO PLAY</p>
-        <p>WASD / Arrows - Move Tiger</p>
-        <p>Space - Jump and stomp slimes while descending</p>
-        <p>F - Fire magic bolt (costs 1 mana)</p>
-        <p>C - Craft magic charm (costs 3 mana)</p>
-        <p>E - Talk to Milo, rescue cats, collect wood and stone</p>
-        <p>H / House a Cat button - House a rescued cat in a barn</p>
-        <p>Collect floating bonus hearts to heal up to 13 health</p>
-        <p>B - Build another barn (5 wood + 3 stone)</p>
-        <p>T - Place road tiles (1 wood + 2 stone each)</p>
-        <p>Y - Place water blocks (1 mana + 2 stone each)</p>
-        <p>Mouse drag / scroll - Rotate camera / zoom</p>
-      </>
-    )}
-  </div>
+      <span
+        style={{
+          width: 8,
+          height: 8,
+          flexShrink: 0,
+          borderRadius: 99,
+          background: gameWon ? "#4ade80" : "#22d3ee",
+          boxShadow: `0 0 12px ${gameWon ? "#4ade80" : "#22d3ee"}`,
+        }}
+      />
+    </div>
 
-    </main>
+    {/* HEALTH + MANA */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 9,
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 15,
+          background: "rgba(255,255,255,.045)",
+          border: "1px solid rgba(255,255,255,.07)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            color: "#94a3b8",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".8px",
+          }}
+        >
+          <span>HEALTH</span>
+          <span style={{ color: "#fb7185" }}>♥</span>
+        </div>
+        <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
+          {health}
+        </div>
+        <div
+          style={{
+            height: 4,
+            marginTop: 8,
+            borderRadius: 99,
+            overflow: "hidden",
+            background: "rgba(255,255,255,.09)",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${Math.max(0, Math.min(100, Number(health) || 0))}%`,
+              background: "linear-gradient(90deg,#fb7185,#f43f5e)",
+              borderRadius: 99,
+            }}
+          />
+        </div>
+      </div>
+
+      <div
+        style={{
+          padding: 12,
+          borderRadius: 15,
+          background: "rgba(255,255,255,.045)",
+          border: "1px solid rgba(255,255,255,.07)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            color: "#94a3b8",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: ".8px",
+          }}
+        >
+          <span>MANA</span>
+          <span style={{ color: "#a78bfa" }}>✦</span>
+        </div>
+        <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
+          {mana}
+        </div>
+        <div
+          style={{
+            height: 4,
+            marginTop: 8,
+            borderRadius: 99,
+            overflow: "hidden",
+            background: "rgba(255,255,255,.09)",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${Math.max(0, Math.min(100, Number(mana) || 0))}%`,
+              background: "linear-gradient(90deg,#818cf8,#c084fc)",
+              borderRadius: 99,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* WORLD STATS */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+        gap: 7,
+      }}
+    >
+      {[
+        { label: "SLIMES", value: slimesDefeated, icon: "◈", color: "#67e8f9" },
+        { label: "CATS", value: catsRescued, icon: "🐾", color: "#f9a8d4" },
+        { label: "HOUSED", value: catsHoused, icon: "⌂", color: "#86efac" },
+        { label: "WOOD", value: wood, icon: "▥", color: "#fbbf24" },
+        { label: "STONE", value: stone, icon: "◆", color: "#cbd5e1" },
+        { label: "BARNS", value: barnCount, icon: "⌂", color: "#fdba74" },
+        { label: "ROADS", value: roadCount, icon: "↗", color: "#93c5fd" },
+        { label: "WATER", value: waterCount, icon: "≈", color: "#67e8f9" },
+      ].map((stat) => (
+        <div
+          key={stat.label}
+          style={{
+            minWidth: 0,
+            padding: "10px 8px",
+            borderRadius: 13,
+            background: "rgba(255,255,255,.035)",
+            border: "1px solid rgba(255,255,255,.06)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              color: stat.color,
+              fontSize: 11,
+              fontWeight: 800,
+            }}
+          >
+            <span>{stat.icon}</span>
+            <span
+              style={{
+                color: "#94a3b8",
+                fontSize: 9,
+                letterSpacing: ".4px",
+              }}
+            >
+              {stat.label}
+            </span>
+          </div>
+          <div
+            style={{
+              marginTop: 7,
+              fontSize: 20,
+              fontWeight: 850,
+              lineHeight: 1,
+              color: "#f8fafc",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {stat.value}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* QUEST */}
+    <div
+      style={{
+        marginTop: 12,
+        padding: 13,
+        borderRadius: 16,
+        border: "1px solid rgba(34,211,238,.16)",
+        background: "linear-gradient(120deg,rgba(8,145,178,.13),rgba(99,102,241,.10))",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 10,
+            color: "#67e8f9",
+            fontWeight: 900,
+            letterSpacing: "1.2px",
+          }}
+        >
+          MAIN QUEST
+        </span>
+        <span
+          style={{
+            padding: "4px 7px",
+            borderRadius: 7,
+            background: questComplete
+              ? "rgba(74,222,128,.13)"
+              : "rgba(255,255,255,.07)",
+            color: questComplete ? "#86efac" : "#cbd5e1",
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          {questComplete ? "COMPLETE" : questStarted ? "IN PROGRESS" : "READY"}
+        </span>
+      </div>
+      <div style={{ marginTop: 8, fontSize: 14, fontWeight: 850 }}>
+        {questComplete ? "Milo is home!" : "Rescue Milo"}
+      </div>
+      <div
+        style={{
+          marginTop: 4,
+          color: "#94a3b8",
+          fontSize: 11,
+          lineHeight: 1.5,
+        }}
+      >
+        {questComplete
+          ? "A new adventure awaits."
+          : "Explore the world and bring your furry friend home."}
+      </div>
+      <div
+        style={{
+          height: 4,
+          marginTop: 11,
+          borderRadius: 99,
+          overflow: "hidden",
+          background: "rgba(255,255,255,.09)",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: questComplete ? "100%" : questStarted ? "50%" : "8%",
+            borderRadius: 99,
+            background: "linear-gradient(90deg,#22d3ee,#818cf8)",
+            transition: "width .3s ease",
+          }}
+        />
+      </div>
+    </div>
+
+    {/* MODE */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+        marginTop: 12,
+        padding: "10px 12px",
+        borderRadius: 13,
+        background: "rgba(255,255,255,.04)",
+        border: "1px solid rgba(255,255,255,.07)",
+      }}
+    >
+      <span
+        style={{
+          color: "#94a3b8",
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: ".8px",
+        }}
+      >
+        BUILD MODE
+      </span>
+      <span
+        style={{
+          maxWidth: 150,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          color: "#a5f3fc",
+          fontSize: 11,
+          fontWeight: 850,
+          textTransform: "uppercase",
+        }}
+      >
+        {mode}
+      </span>
+    </div>
+
+    {/* ACTIONS */}
+    <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+      <button
+        ref={houseCatActionRef}
+        onClick={() => {
+          houseCatActionRef.current?.blur();
+        }}
+        style={{
+          width: "100%",
+          minHeight: 42,
+          padding: "10px 12px",
+          borderRadius: 13,
+          border: "1px solid rgba(34,211,238,.24)",
+          background: "linear-gradient(110deg,rgba(8,145,178,.24),rgba(79,70,229,.20))",
+          color: "#cffafe",
+          fontSize: 12,
+          fontWeight: 850,
+          cursor: "pointer",
+        }}
+      >
+        🐾 {canHouseCat ? "HOUSE RESCUED CAT" : "CAT SANCTUARY"}
+      </button>
+
+      <button
+        onClick={() => {
+          const nextInverted = !invertedMovementRef.current;
+          invertedMovementRef.current = nextInverted;
+          setInvertedMovement(nextInverted);
+        }}
+        style={{
+          width: "100%",
+          minHeight: 38,
+          padding: "9px 12px",
+          borderRadius: 12,
+          border: "1px solid rgba(255,255,255,.09)",
+          background: "rgba(255,255,255,.035)",
+          color: "#cbd5e1",
+          fontSize: 11,
+          fontWeight: 750,
+          cursor: "pointer",
+        }}
+      >
+        ↕ Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
+      </button>
+    </div>
+
+    {/* GAME MESSAGE */}
+    <div
+      style={{
+        marginTop: 11,
+        padding: "10px 11px",
+        borderLeft: "2px solid #22d3ee",
+        borderRadius: "0 10px 10px 0",
+        background: "rgba(34,211,238,.055)",
+        color: "#cbd5e1",
+        fontSize: 11,
+        lineHeight: 1.5,
+        overflowWrap: "anywhere",
+      }}
+    >
+      {message}
+    </div>
+  </section>
+
+  {/* RIGHT CONTROLS */}
+  <aside
+    className="game-hud-scroll"
+    style={{
+      position: "fixed",
+      right: 18,
+      bottom: 18,
+      zIndex: 800,
+      width: 290,
+      maxWidth: "calc(100vw - 36px)",
+      maxHeight: "calc(100dvh - 36px)",
+      overflowY: "auto",
+      overflowX: "hidden",
+      padding: 15,
+      borderRadius: 20,
+      border: "1px solid rgba(148,163,184,.18)",
+      background: "linear-gradient(145deg,rgba(9,18,34,.86),rgba(12,24,43,.72))",
+      backdropFilter: "blur(20px)",
+      WebkitBackdropFilter: "blur(20px)",
+      boxShadow: "0 18px 55px rgba(0,0,0,.25)",
+    }}
+  >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: "1.4px",
+          color: "#e2e8f0",
+        }}
+      >
+        CONTROLS
+      </div>
+      <div
+        style={{
+          padding: "4px 7px",
+          borderRadius: 7,
+          background: "rgba(34,211,238,.10)",
+          color: "#67e8f9",
+          fontSize: 9,
+          fontWeight: 850,
+        }}
+      >
+        HOW TO PLAY
+      </div>
+    </div>
+
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 7,
+      }}
+    >
+      {[
+        ["W A S D", "Move"],
+        ["ARROWS", "Move"],
+        ["SHIFT", "Sprint"],
+        ["MOUSE", "Look around"],
+        ["WHEEL", "Zoom camera"],
+        ["SPACE", "Jump / stomp"],
+        ["F", "Fire magic bolt"],
+        ["C", "Craft charm"],
+        ["E", "Interact / rescue / collect"],
+        ["B", "Barn build mode"],
+        ["T", "Road build mode"],
+        ["Q / R", "Rotate build preview"],
+        ["ENTER", "Build / place"],
+        ["ESC", "Cancel / exit build mode"],
+      ].map(([key, description]) => (
+        <div
+          key={key}
+          style={{
+            minWidth: 0,
+            padding: 8,
+            borderRadius: 10,
+            border: "1px solid rgba(148,163,184,.12)",
+            background: "rgba(255,255,255,.035)",
+          }}
+        >
+          <div
+            style={{
+              color: "#67e8f9",
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: ".35px",
+              marginBottom: 4,
+            }}
+          >
+            {key}
+          </div>
+          <div
+            style={{
+              color: "#cbd5e1",
+              fontSize: 10,
+              lineHeight: 1.35,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {description}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div
+      style={{
+        marginTop: 10,
+        padding: 10,
+        borderRadius: 12,
+        background: "rgba(99,102,241,.09)",
+        border: "1px solid rgba(129,140,248,.12)",
+      }}
+    >
+      <div
+        style={{
+          color: "#c4b5fd",
+          fontSize: 10,
+          fontWeight: 900,
+          letterSpacing: ".7px",
+          marginBottom: 5,
+        }}
+      >
+        CURRENT OBJECTIVE
+      </div>
+      <div
+        style={{
+          color: "#cbd5e1",
+          fontSize: 11,
+          lineHeight: 1.5,
+        }}
+      >
+        {mode === "water"
+          ? "Place water to bring your world to life."
+          : mode === "road"
+          ? "Build roads to connect your world."
+          : mode === "barn"
+          ? "Place a barn to grow your sanctuary."
+          : "Explore, rescue cats, collect resources, and build."}
+      </div>
+    </div>
+  </aside>
+</main>
   );
 }
-
