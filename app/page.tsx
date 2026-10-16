@@ -129,7 +129,7 @@ export default function Home() {
   const [questComplete, setQuestComplete] = useState(false);
   const [gameWon, setGameWon] = useState(false);
   const [message, setMessage] = useState(
-    "Welcome home, Tiger! Collect mana, meet Milo, and protect the yard."
+    "Welcome home, Tiger! Collect mana, meet Paris, and protect the yard."
   );
 
   const canHouseCat = barnBuilt && catsRescued > catsHoused;
@@ -2409,12 +2409,12 @@ setMessage("Tiger's 3D model is ready!");
       [87, -30], [76, 20],
     ].forEach(([x, z], i) => createResource("stone", x, z, i));
 
-    // Milo.
+    // Paris.
     const npcX = -8;
     const npcZ = -4;
 
     const npcBody = MeshBuilder.CreateCylinder(
-      "MiloBody",
+      "ParisBody",
       { height: 1.25, diameter: 0.65 },
       scene
     );
@@ -2422,7 +2422,7 @@ setMessage("Tiger's 3D model is ready!");
     npcBody.material = npcMat;
 
     const npcHead = MeshBuilder.CreateSphere(
-      "MiloHead",
+      "ParisHead",
       { diameter: 0.7 },
       scene
     );
@@ -2431,7 +2431,7 @@ setMessage("Tiger's 3D model is ready!");
 
     for (const offset of [-0.13, 0.13]) {
       const eye = MeshBuilder.CreateSphere(
-        `MiloEye${offset}`,
+        `ParisEye${offset}`,
         { diameter: 0.08 },
         scene
       );
@@ -2440,7 +2440,7 @@ setMessage("Tiger's 3D model is ready!");
     }
 
     const npcMarker = MeshBuilder.CreateTorus(
-      "MiloQuestMarker",
+      "ParisQuestMarker",
       { diameter: 0.75, thickness: 0.12 },
       scene
     );
@@ -3483,7 +3483,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
             questStartedLocal = true;
             setQuestStarted(true);
             setMessage(
-              "Milo: Help protect our yard! Defeat 3 slimes, then come back to me."
+              "Paris: Help protect our yard! Defeat 3 slimes, then come back to me."
             );
           } else if (slimeKillCount >= 3 && !questClaimed) {
             questClaimed = true;
@@ -3491,13 +3491,13 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
             manaCount += 3;
             setMana(manaCount);
             setMessage(
-              "Milo: You did it! Here are 3 bonus mana crystals. You're a hero, Tiger!"
+              "Paris: You did it! Here are 3 bonus mana crystals. You're a hero, Tiger!"
             );
           } else if (questClaimed) {
-            setMessage("Milo: Thanks for protecting the yard, Tiger!");
+            setMessage("Paris: Thanks for protecting the yard, Tiger!");
           } else {
             setMessage(
-              `Milo: You've defeated ${slimeKillCount}/3 slimes. Keep going!`
+              `Paris: You've defeated ${slimeKillCount}/3 slimes. Keep going!`
             );
           }
           return;
@@ -3566,7 +3566,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
           }
         } else {
           setMessage(
-            "Get closer to Milo, an unrescued cat, wood, or stone, then press E."
+            "Get closer to Paris, an unrescued cat, wood, or stone, then press E."
           );
         }
       }
@@ -4101,7 +4101,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
       ) {
         setGameWon(true);
         setMessage(
-          "YOU DID IT, TIGER! Every cat is safe, Milo's quest is complete, and the yard is protected!"
+          "YOU DID IT, TIGER! Every cat is safe, Paris's quest is complete, and the yard is protected!"
         );
       }
 
@@ -4511,7 +4511,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
         </span>
       </div>
       <div style={{ marginTop: 8, fontSize: 14, fontWeight: 850 }}>
-        {questComplete ? "Milo is home!" : "Rescue Milo"}
+        {questComplete ? "Paris is home!" : "Rescue Paris"}
       </div>
       <div
         style={{
