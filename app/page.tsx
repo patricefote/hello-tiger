@@ -781,155 +781,46 @@ console.log(
     makeCloud("CloudSouthEast", 25, 15, 29, 1.2, 5.1, -0.7);
 
     // Home: layered foundation, gable roof, framed windows, and a paneled door.
-    // Keep these as separate meshes so the existing scene and gameplay remain intact.
-    const houseFoundation = MeshBuilder.CreateBox(
-      "HouseFoundation",
-      { width: 6.35, height: 0.48, depth: 5.3 },
-      scene
-    );
-    houseFoundation.position.set(0, 0.24, 8);
-    houseFoundation.material = stoneMat;
-    shadowGenerator.addShadowCaster(houseFoundation);
-    houseFoundation.receiveShadows = true;
-
-    const house = MeshBuilder.CreateBox(
-      "House",
-      { width: 6, height: 4, depth: 5 },
-      scene
-    );
-    house.position.set(0, 2.22, 8);
-    house.material = wallMat;
-    shadowGenerator.addShadowCaster(house);
-    house.receiveShadows = true;
-
-    // A two-sided pitched roof replaces the pointed cone. The sloped panels
-    // create a familiar cottage silhouette and keep the terracotta texture.
-    const roofLeft = MeshBuilder.CreateBox(
-      "HouseRoofLeft",
-      { width: 3.75, height: 0.28, depth: 5.7 },
-      scene
-    );
-    roofLeft.position.set(-1.45, 4.83, 8);
-    roofLeft.rotation.z = 0.43;
-    roofLeft.material = roofMat;
-    shadowGenerator.addShadowCaster(roofLeft);
-
-    const roofRight = MeshBuilder.CreateBox(
-      "HouseRoofRight",
-      { width: 3.75, height: 0.28, depth: 5.7 },
-      scene
-    );
-    roofRight.position.set(1.45, 4.83, 8);
-    roofRight.rotation.z = -0.43;
-    roofRight.material = roofMat;
-    shadowGenerator.addShadowCaster(roofRight);
-
-    // Ridge cap softens the join between roof slopes.
-    const roofRidge = MeshBuilder.CreateCylinder(
-      "HouseRoofRidge",
-      { height: 5.85, diameter: 0.24, tessellation: 12 },
-      scene
-    );
-    roofRidge.rotation.x = Math.PI / 2;
-    roofRidge.position.set(0, 5.58, 8);
-    roofRidge.material = roofMat;
-    shadowGenerator.addShadowCaster(roofRidge);
-
-    // Front and rear fascia boards add depth to the roof edge.
-    for (const z of [5.08, 10.92]) {
-      for (const side of [-1, 1]) {
-        const fascia = MeshBuilder.CreateBox(
-          `HouseRoofFascia${z}_${side}`,
-          { width: 3.8, height: 0.18, depth: 0.12 },
+    
+    // Starter house imported from the stylized GLB asset.
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "work_33_stylized_houses_blender3d.glb",
           scene
         );
-        fascia.position.set(side * 1.43, 4.82, z);
-        fascia.rotation.z = side === -1 ? 0.43 : -0.43;
-        fascia.material = woodMat;
-        shadowGenerator.addShadowCaster(fascia);
+
+        const root =
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes[0];
+
+        if (!root) {
+          throw new Error("House GLB did not provide a root mesh.");
+        }
+
+        // Scale the complete asset to fit the starter-house footprint.
+        const houseScale = 0.42;
+        root.scaling.setAll(houseScale);
+
+        // Center the model, align its lowest point to the ground,
+        // and preserve the existing starter-house location at Z = 8.
+        root.position.set(-0.616, 0.898, 7.994);
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        console.log("Starter house GLB loaded and positioned.");
+      } catch (error) {
+        console.error("Failed to load starter house GLB:", error);
       }
-    }
+    })();
 
-    // Door casing, inset panel, and handle.
-    const doorFrame = MeshBuilder.CreateBox(
-      "FrontDoorFrame",
-      { width: 1.48, height: 2.42, depth: 0.18 },
-      scene
-    );
-    doorFrame.position.set(0, 1.25, 5.43);
-    doorFrame.material = woodMat;
-
-    const door = MeshBuilder.CreateBox(
-      "FrontDoor",
-      { width: 1.16, height: 2.14, depth: 0.12 },
-      scene
-    );
-    door.position.set(0, 1.17, 5.54);
-    door.material = woodMat;
-
-    const doorPanel = MeshBuilder.CreateBox(
-      "FrontDoorPanel",
-      { width: 0.72, height: 1.08, depth: 0.035 },
-      scene
-    );
-    doorPanel.position.set(0, 1.38, 5.615);
-    doorPanel.material = roofWoodMat;
-
-    const doorKnob = MeshBuilder.CreateSphere(
-      "DoorKnob",
-      { diameter: 0.13, segments: 12 },
-      scene
-    );
-    doorKnob.position.set(0.39, 1.12, 5.64);
-    doorKnob.material = manaMat;
-
-    // Window frames sit proud of the plaster; glass panes and crossbars add
-    // depth without relying on shiny materials.
-    for (const x of [-1.9, 1.9]) {
-      const windowFrame = MeshBuilder.CreateBox(
-        `HouseWindowFrame${x}`,
-        { width: 1.28, height: 1.28, depth: 0.18 },
-        scene
-      );
-      windowFrame.position.set(x, 2.65, 5.43);
-      windowFrame.material = woodMat;
-
-      const windowMesh = MeshBuilder.CreateBox(
-        `HouseWindow${x}`,
-        { width: 1.02, height: 1.02, depth: 0.08 },
-        scene
-      );
-      windowMesh.position.set(x, 2.65, 5.55);
-      windowMesh.material = blueMat;
-
-      const verticalBar = MeshBuilder.CreateBox(
-        `HouseWindowVerticalBar${x}`,
-        { width: 0.07, height: 1.04, depth: 0.07 },
-        scene
-      );
-      verticalBar.position.set(x, 2.65, 5.61);
-      verticalBar.material = whiteMat;
-
-      const horizontalBar = MeshBuilder.CreateBox(
-        `HouseWindowHorizontalBar${x}`,
-        { width: 1.04, height: 0.07, depth: 0.07 },
-        scene
-      );
-      horizontalBar.position.set(x, 2.65, 5.61);
-      horizontalBar.material = whiteMat;
-    }
-
-    // Small stone corner blocks help visually connect the walls to the base.
-    for (const x of [-2.85, 2.85]) {
-      const cornerStone = MeshBuilder.CreateBox(
-        `HouseCornerStone${x}`,
-        { width: 0.28, height: 3.85, depth: 0.28 },
-        scene
-      );
-      cornerStone.position.set(x, 2.15, 5.42);
-      cornerStone.material = stoneMat;
-      shadowGenerator.addShadowCaster(cornerStone);
-    }
 
     // Expanded tree locations.
     // Shared wind animation registry for foliage and ground plants.
@@ -1752,25 +1643,31 @@ const treePositions = [
         if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
           throw new Error("Could not determine the height of tiger.glb.");
         }
-        const targetHeight = 1.62;
+        const targetHeight = 1.95;
         const uniformScale = targetHeight / modelHeight;
 
-        const modelRoot = imported.meshes.find((mesh) => mesh.name === "__root__")
-          ?? imported.meshes.find((mesh) => mesh.parent === null);
-        if (modelRoot) {
-          modelRoot.parent = tigerVisualRoot;
-          modelRoot.scaling.set(uniformScale, uniformScale, uniformScale);
-          modelRoot.position.y += -minY * uniformScale;
-        } else {
-          // Defensive fallback for GLBs that expose multiple top-level meshes.
-          modelMeshes.forEach((mesh) => {
-            if (!mesh.parent) {
-              mesh.parent = tigerVisualRoot;
-              mesh.scaling.scaleInPlace(uniformScale);
-            }
-          });
-          tigerVisualRoot.position.y = -minY * uniformScale;
-        }
+        
+const modelRoot = imported.meshes.find(
+  (mesh) => mesh.name === "__root__"
+) ?? imported.meshes.find((mesh) => mesh.parent === null);
+
+const visualScale = uniformScale * 1.5;
+
+if (modelRoot) {
+  modelRoot.parent = tigerVisualRoot;
+  modelRoot.scaling.set(visualScale, visualScale, visualScale);
+  modelRoot.position.y = -minY * visualScale;
+} else {
+  // Defensive fallback for GLBs that expose multiple top-level meshes.
+  modelMeshes.forEach((mesh) => {
+    if (!mesh.parent) {
+      mesh.parent = tigerVisualRoot;
+      mesh.scaling.scaleInPlace(visualScale);
+    }
+  });
+
+  tigerVisualRoot.position.y = -minY * visualScale;
+}
 
         imported.meshes.forEach((mesh) => {
           if (mesh !== modelRoot && !mesh.parent) mesh.parent = tigerVisualRoot;
@@ -1789,17 +1686,32 @@ const treePositions = [
           shadowGenerator.removeShadowCaster(mesh);
         });
 
-        tigerModelAnimations = imported.animationGroups;
-        tigerModelAnimations.forEach((group) => group.stop());
-        const initialAnimation = tigerModelAnimations.find((group) =>
-          /idle|stand|breath/i.test(group.name)
-        ) ?? tigerModelAnimations[0];
-        if (initialAnimation) {
-          initialAnimation.start(true);
-          activeTigerAnimation = initialAnimation.name;
-        }
-        tigerModelLoaded = true;
-        setMessage("Tiger's 3D model is ready!");
+        
+tigerModelAnimations = imported.animationGroups;
+tigerModelAnimations.forEach((group) => group.stop());
+
+// Prefer a genuine idle animation rather than blindly playing the first clip.
+const initialAnimation =
+  tigerModelAnimations.find((group) =>
+    /idle|stand|breath/i.test(group.name)
+  );
+
+activeTigerAnimation = "";
+
+tigerModelLoaded = true;
+
+if (initialAnimation) {
+  initialAnimation.start(true);
+  activeTigerAnimation = initialAnimation.name;
+} else {
+  console.warn(
+    "No idle animation found for Tiger. Available animations:",
+    tigerModelAnimations.map((group) => group.name)
+  );
+}
+
+setMessage("Tiger's 3D model is ready!");
+
       } catch (error) {
         console.error("Could not load /models/tiger-animated.glb. Keeping the built-in Tiger model.", error);
         setMessage("Couldn't load tiger.glb. Check that it is in public/models and that the Babylon loaders package is installed.");
@@ -2555,17 +2467,32 @@ const createLightningProjectileVisual = (name: string) => {
         cast: [/spell.cast/i],
       };
 
-      const next =
+     const next = 
         tigerModelAnimations.find((group) => group.name === clipNames[kind]) ??
         tigerModelAnimations.find((group) =>
           fallbackPatterns[kind].some((pattern) => pattern.test(group.name))
         );
 
-      if (!next || next.name === activeTigerAnimation) return;
+     
+if (!next || next.name === activeTigerAnimation) return;
 
-      tigerModelAnimations.forEach((group) => group.stop());
-      next.start(kind !== "cast");
-      activeTigerAnimation = next.name;
+
+const previous = tigerModelAnimations.find(
+  (group) => group.name === activeTigerAnimation
+);
+
+if (previous?.isPlaying) {
+  previous.stop();
+}
+
+tigerModelAnimations.forEach((group) => {
+  if (group !== next) group.stop();
+});
+
+next.start(kind !== "cast");
+activeTigerAnimation = next.name;
+
+activeTigerAnimation = next.name;
 
     if (kind === "cast") {
   tigerIsCasting = true;
@@ -2595,7 +2522,6 @@ const createLightningProjectileVisual = (name: string) => {
 
   
     // HELLO TIGER! — Reusable Imported Material Library
-    // Declare these ONCE outside this barn section, in the shared scope:
     // let rusticTimberMat: Material | null = null;
     // let weatheredPlanksMat: Material | null = null;
 
@@ -3432,7 +3358,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
         if (closestResource && closestResourceDistance < 1.9) {
           closestResource.collected = true;
-          closestResource.mesh.setEnabled(false);
+          closestResource.mesh.setEnabled(true);
 
           if (closestResource.type === "wood") {
             woodCount += 1;
@@ -3579,7 +3505,7 @@ const frameMaterial: Material = rusticTimberMat ?? barnRedMat;
 
       updateCats(dt, now);
 
-      if (buildMode === "none") {
+     if (buildMode === "none" && tigerModelLoaded) {
         const sprinting = keys.has("shift");
         const moveSpeed = (sprinting ? 0.216 : 0.12) * dt;
         let moveX = 0;
