@@ -964,6 +964,62 @@ console.log(
       }
     })();
 
+    
+    // Fantasy house landmark — tucked just beyond the forest.
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "fantasy house.glb",
+          scene
+        );
+
+        const root =
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes[0];
+
+        if (!root) {
+          throw new Error("Fantasy house GLB did not provide a root mesh.");
+        }
+
+        // Make the fantasy house three times its original size.
+        root.scaling.scaleInPlace(7.6);
+        root.position.set(0, 0, 0);
+
+        // Calculate its scaled bounds and place its base on ground level.
+        const bounds = root.getHierarchyBoundingVectors(true);
+        const centerX = (bounds.min.x + bounds.max.x) / 2;
+        const centerZ = (bounds.min.z + bounds.max.z) / 2;
+
+        const worldX = 65;
+        const worldZ = 35;
+
+             const groundOffset = -0.78;
+
+        root.position.set(
+          worldX - centerX,
+          -bounds.min.y + groundOffset,
+          worldZ - centerZ
+        );
+
+        imported.meshes.forEach((mesh) => {
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        console.log("FANTASY HOUSE LOADED", {
+          scale: 7.6,
+          position: { x: worldX, z: worldZ },
+          meshCount: imported.meshes.length,
+        });
+      } catch (error) {
+        console.error("Failed to load fantasy house:", error);
+      }
+    })();
+
     // Shared wind animation registry for foliage and ground plants.
     // Very subtle motion adds life without creating per-frame allocations.
     const windSwayMeshes: {
