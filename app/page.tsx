@@ -801,7 +801,7 @@ console.log(
         }
 
         // Scale the complete asset to fit the starter-house footprint.
-        const houseScale = 0.42;
+        const houseScale = 0.84;
         root.scaling.setAll(houseScale);
 
         // Center the model, align its lowest point to the ground,
@@ -821,6 +821,62 @@ console.log(
       }
     })();
 
+    // Two decorative barn landmarks — scenery only, not player-built.
+    void (async () => {
+      const barnPositions = [
+        { x: -8, z: 8 },
+        { x: -19, z: 13 },
+      ];
+
+      for (const [index, position] of barnPositions.entries()) {
+        try {
+          const imported = await SceneLoader.ImportMeshAsync(
+            "",
+            "/models/",
+            "barn.glb",
+            scene
+          );
+
+          const root =
+            imported.meshes.find((mesh) => mesh.name === "__root__") ??
+            imported.meshes[0];
+
+          if (!root) {
+            throw new Error(`Barn ${index + 1} GLB has no root mesh.`);
+          }
+
+          // Three times the original scale.
+          root.scaling.setAll(2.8);
+          root.position.set(0, 0, 0);
+
+          // Center the barn horizontally and align its base to the ground.
+          const bounds = root.getHierarchyBoundingVectors(true);
+          const centerX = (bounds.min.x + bounds.max.x) / 2;
+          const centerZ = (bounds.min.z + bounds.max.z) / 2;
+
+          root.position.set(
+            position.x - centerX,
+            -bounds.min.y,
+            position.z - centerZ
+          );
+
+          imported.meshes.forEach((mesh) => {
+            if (mesh.getTotalVertices() > 0) {
+              mesh.receiveShadows = true;
+              shadowGenerator.addShadowCaster(mesh);
+            }
+          });
+
+          console.log(
+            `Decorative barn ${index + 1} loaded at:`,
+            position.x,
+            position.z
+          );
+        } catch (error) {
+          console.error(`Failed to load decorative barn ${index + 1}:`, error);
+        }
+      }
+    })();
 
     // Expanded tree locations.
     // Shared wind animation registry for foliage and ground plants.
