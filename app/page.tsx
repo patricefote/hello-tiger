@@ -569,7 +569,10 @@ ground.material = grassMat;
 ground.isPickable = false;
 ground.receiveShadows = true;
 
-    // LAKE: a natural-looking oval on the new eastern countryside.
+
+    // LAKE: a natural-looking oval, spaced away from the new environments.
+  
+    // LAKE: move behind the house and farther from the environments.
     const lakeShoreMat = new StandardMaterial("LakeShoreMaterial", scene);
     lakeShoreMat.diffuseColor = new Color3(0.48, 0.39, 0.25);
     lakeShoreMat.specularColor = new Color3(0.12, 0.12, 0.12);
@@ -579,7 +582,7 @@ ground.receiveShadows = true;
       { diameter: 23, height: 0.12, tessellation: 64 },
       scene
     );
-    lakeShore.position.set(52, 0.035, 16);
+    lakeShore.position.set(65, 0.035, 55);
     lakeShore.scaling.z = 0.68;
     lakeShore.material = lakeShoreMat;
     lakeShore.isPickable = false;
@@ -597,12 +600,206 @@ ground.receiveShadows = true;
       { diameter: 20.5, height: 0.1, tessellation: 64 },
       scene
     );
-    lake.position.set(52, 0.12, 16);
+    lake.position.set(65, 0.12, 55);
     lake.scaling.z = 0.68;
     lake.material = lakeWaterMat;
     lake.isPickable = false;
     lake.receiveShadows = false;
-    
+
+    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS
+    // Diagnostic mode: identify and isolate the mountain sphere.
+    void (async () => {
+      const environments = [
+        {
+          name: "JapaneseExplorationLocation",
+          file: "an_overgrown_japanese-style_location.glb",
+          x: 10,
+          z: -72,
+          targetFootprint: 110,
+          groundOffset: -15.8,
+        },
+        {
+          name: "ReachableMountainLandscape",
+          file: "landscape_forest__mountains.glb",
+          x: 180,
+          z: -25,
+          targetFootprint: 420,
+          groundOffset: -25.9,
+        },
+      ];
+
+      for (const environment of environments) {
+        try {
+          const imported = await SceneLoader.ImportMeshAsync(
+            "",
+            "/models/",
+            environment.file,
+            scene
+          );
+
+          if (scene.isDisposed) {
+            imported.meshes.forEach((mesh) => mesh.dispose());
+            return;
+          }
+
+          const root =
+            imported.meshes.find((mesh) => mesh.name === "__root__") ??
+            imported.meshes.find((mesh) => mesh.parent === null) ??
+            imported.meshes[0];
+
+          if (!root) {
+            imported.meshes.forEach((mesh) => mesh.dispose());
+            console.error(`No root mesh found for ${environment.file}`);
+            continue;
+          }
+
+          root.name = environment.name;
+
+          // Log all meshes for the mountain asset so we can identify its sphere.
+          if (environment.file === "landscape_forest__mountains.glb") {
+            console.log(
+              "HELLO TIGER! MOUNTAIN — ALL MESHES",
+              imported.meshes.map((mesh, index) => ({
+                index,
+                name: mesh.name,
+                parent: mesh.parent?.name ?? "(no parent)",
+                vertices: mesh.getTotalVertices(),
+                material: mesh.material?.name ?? "(no material)",
+                enabled: mesh.isEnabled(),
+                position: {
+                  x: mesh.position.x,
+                  y: mesh.position.y,
+                  z: mesh.position.z,
+                },
+                scaling: {
+                  x: mesh.scaling.x,
+                  y: mesh.scaling.y,
+                  z: mesh.scaling.z,
+                },
+              }))
+            );
+          } else {
+            console.log(
+              `HELLO TIGER! ${environment.name} — DOME CANDIDATES`,
+              imported.meshes
+                .map((mesh) => ({
+                  name: mesh.name,
+                  parent: mesh.parent?.name ?? "(no parent)",
+                  vertices: mesh.getTotalVertices(),
+                  material: mesh.material?.name ?? "(no material)",
+                }))
+                .filter((mesh) =>
+                  /dome|sphere|sky|horizon|background|environment/i.test(
+                    `${mesh.name} ${mesh.parent} ${mesh.material}`
+                  )
+                )
+            );
+          }
+
+          // Hide the confirmed Japanese sphere, without disposing it.
+          if (
+            environment.file === "an_overgrown_japanese-style_location.glb"
+          ) {
+            imported.meshes.forEach((mesh) => {
+              if (
+                mesh.name === "Sphere_Material_0" ||
+                mesh.parent?.name === "Sphere"
+              ) {
+                mesh.setEnabled(false);
+                console.log("JAPANESE SPHERE HIDDEN", mesh.name);
+              }
+            });
+          }
+
+         
+          // Hide the confirmed mountain dome without disposing it.
+          if (
+            environment.file === "landscape_forest__mountains.glb"
+          ) {
+            imported.meshes.forEach((mesh) => {
+              if (
+                mesh.name === "Sphere_Material.011_0" &&
+                mesh.parent?.name === "Sphere"
+              ) {
+                mesh.setEnabled(false);
+
+                console.log("MOUNTAIN DOME HIDDEN — PRESERVED FOR REUSE", {
+                  name: mesh.name,
+                  parent: mesh.parent?.name ?? null,
+                  material: mesh.material?.name ?? null,
+                  vertices: mesh.getTotalVertices(),
+                });
+              }
+            });
+          }
+
+          // Calculate model dimensions.
+          root.computeWorldMatrix(true);
+          let bounds = root.getHierarchyBoundingVectors(true);
+
+          const sizeX = bounds.max.x - bounds.min.x;
+          const sizeZ = bounds.max.z - bounds.min.z;
+          const footprint = Math.max(sizeX, sizeZ);
+
+          if (!Number.isFinite(footprint) || footprint <= 0) {
+            console.error(`Invalid model dimensions: ${environment.file}`);
+            imported.meshes.forEach((mesh) => mesh.dispose());
+            continue;
+          }
+
+          // Scale the environment to its configured footprint.
+          const scale = environment.targetFootprint / footprint;
+          root.scaling.scaleInPlace(scale);
+          root.computeWorldMatrix(true);
+
+          bounds = root.getHierarchyBoundingVectors(true);
+
+          // Center the environment at its configured X/Z coordinates.
+          root.position.x +=
+            environment.x - (bounds.min.x + bounds.max.x) / 2;
+
+          root.position.z +=
+            environment.z - (bounds.min.z + bounds.max.z) / 2;
+
+          // Align vertically and apply the configured ground offset.
+          root.position.y -= bounds.min.y;
+          root.position.y += environment.groundOffset;
+
+          root.computeWorldMatrix(true);
+
+          // Configure visible environment meshes and their shadows.
+          imported.meshes.forEach((mesh) => {
+            if (mesh.getTotalVertices() === 0 || !mesh.isEnabled()) return;
+
+            mesh.isPickable = true;
+            mesh.receiveShadows = true;
+
+            if (mesh !== root) {
+              shadowGenerator.addShadowCaster(mesh, true);
+            }
+          });
+
+          console.log("HELLO TIGER! ENVIRONMENT LOADED", {
+            name: environment.name,
+            file: environment.file,
+            position: {
+              x: environment.x,
+              z: environment.z,
+              groundOffset: environment.groundOffset,
+            },
+            scale,
+            footprint: environment.targetFootprint,
+          });
+        } catch (error) {
+          console.error(
+            `Failed to load environment: ${environment.file}`,
+            error
+          );
+        }
+      }
+    })();
+
+
             // MEDIEVAL COUNTRYSIDE HOUSE
         void (async () => {
           try {
