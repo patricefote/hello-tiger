@@ -623,7 +623,7 @@ ground.receiveShadows = true;
           file: "landscape_forest__mountains.glb",
           x: 180,
           z: -25,
-          targetFootprint: 420,
+          targetFootprint: 450,
           groundOffset: -25.9,
         },
       ];
