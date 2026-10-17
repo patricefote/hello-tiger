@@ -1072,10 +1072,12 @@ console.log(
       }
     })();
 
-    // Expanded tree locations.
+        // Expanded tree locations.
 
-    
-   
+    // Shared tree-template registry, accessible to both the loader and placement code.
+    const importedTreeTemplates: TransformNode[] = [];
+    let importedTreeTemplatesReady = false;
+
     // Low-poly forest and lake — imported world scenery.
     void (async () => {
       try {
@@ -1131,34 +1133,86 @@ console.log(
           }
         });
 
-        // Inventory the imported meshes and materials for reuse.
-        const materialNames = new Set<string>();
+         
+    // Locate each complete tree branch by its bark transform.
+    const barkNodes = imported.transformNodes.filter((node) =>
+      /^Bark(?:\.\d+)?_\d+$/.test(node.name)
+    );
 
-        imported.meshes.forEach((mesh) => {
-          if (mesh.material) {
-            materialNames.add(mesh.material.name);
-          }
-        });
+    barkNodes.forEach((barkNode) => {
+      const hasTreeMeshes = barkNode
+        .getChildMeshes(false)
+        .some((mesh) => mesh.getTotalVertices() > 0);
 
-        console.log("FOREST SCENE LOADED", {
-          meshCount: imported.meshes.length,
-          sceneScale,
-          bounds: initialSize.asArray(),
-          meshes: imported.meshes
-            .filter((mesh) => mesh.getTotalVertices() > 0)
-            .map((mesh) => ({
-              name: mesh.name,
-              material: mesh.material?.name ?? "none",
-              vertices: mesh.getTotalVertices(),
-            })),
-          materials: [...materialNames],
+      if (hasTreeMeshes) {
+        importedTreeTemplates.push(barkNode);
+      }
+    });
+
+    importedTreeTemplatesReady = true;
+
+    console.log("IMPORTED TREE TEMPLATES READY", {
+      templateCount: importedTreeTemplates.length,
+      forestScale: sceneScale,
+      forestPosition: { x: worldX, z: worldZ },
+    });
+
+    const positions = [...treePositions, ...extraTreePositions];
+
+    positions.forEach(([x, z], index) => {
+      const template =
+        importedTreeTemplates[index % importedTreeTemplates.length];
+
+      if (!template) {
+        console.error("TREE TEMPLATE MISSING", { index });
+        return;
+      }
+
+      // Clone the bark branch and its complete descendant hierarchy.
+      const clone = template.clone(`placedTree_${index}`, null, false);
+
+      if (!clone) {
+        console.error("TREE CLONE FAILED", { index });
+        return;
+      }
+
+      // Detach the placed tree from the source forest's scaled hierarchy.
+      clone.parent = null;
+      clone.position.set(x, 0, z);
+      clone.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      clone.scaling.setAll(1);
+      clone.setEnabled(true);
+
+      clone.getChildMeshes(false).forEach((mesh) => {
+        mesh.setEnabled(true);
+        mesh.isVisible = true;
+        mesh.isPickable = true;
+        mesh.receiveShadows = true;
+        shadowGenerator.addShadowCaster(mesh);
+      });
+
+      clone.computeWorldMatrix(true);
+
+      if (index === 0) {
+        console.log("FIRST TREE CLONE CHECK", {
+          name: clone.name,
+          enabled: clone.isEnabled(),
+          childMeshes: clone.getChildMeshes(false).length,
+          position: clone.getAbsolutePosition().asArray(),
+          boundsMin: clone.getHierarchyBoundingVectors(true).min.asArray(),
+          boundsMax: clone.getHierarchyBoundingVectors(true).max.asArray(),
         });
+      }
+    });
+
+    console.log("IMPORTED TREES PLACED", {
+      requested: positions.length,
+      templates: importedTreeTemplates.length,
+    });
       } catch (error) {
         console.error("Failed to load forest and lake scene:", error);
       }
     })();
-
-    
     // Fantasy house landmark — tucked just beyond the forest.
     void (async () => {
       try {
@@ -1176,8 +1230,6 @@ console.log(
         if (!root) {
           throw new Error("Fantasy house GLB did not provide a root mesh.");
         }
-
-        
         // Make the fantasy house larger and position it on the ground.
         root.scaling.scaleInPlace(7.6);
         root.position.set(0, 0, 0);
@@ -1231,176 +1283,64 @@ console.log(
       speed: number;
     }[] = [];
 
-const treePositions = [
-  // Home area — keep a few trees near spawn
-  [-28, -7], 
+    const extraTreePositions: [number, number][] = [
+  [-105, -115], [-75, -95], [-120, -55],
+  [-95, -10], [-115, 35], [-80, 75],
+  [-45, 100], [-5, 115], [35, 105],
+  [80, 115], [125, 105], [175, 115],
+  [215, 90], [220, 45], [225, 5],
+  [195, 25], [160, 5], [135, 35],
+  [110, 15], [85, -10], [55, -25],
+  [35, -100], [75, -125], [115, -105],
+  [150, -125], [185, -100], [220, -120],
+  [-65, -130], [-110, 110], [5, 65],
+];
+
+const treePositions: [number, number][] = [
+  // Home area
+  [-28, -7],
+
   // Western woodland
-  [2, -17], [23, -1], [19, 3],
-  [-13, 37],
+  [2, -17], [23, -1], [19, 3], [-13, 37],
 
   // Northern woodland
-  [-19, 25], [10, -2],
-  [13, -3],
+  [-19, 25], [10, -2], [13, -3],
 
   // Eastern woodland
-  [7, -13], [4, -3],
-  [-5, 28], [3, 41],
+  [7, -13], [4, -3], [-5, 28], [3, 41],
 
   // Southern woodland
-  [-3, 34], [-4, 29], 
+  [-3, 34], [-4, 29],
 
   // Scattered interior trees
-  [-29, 12], [-7, 14], 
+  [-29, 12], [-7, 14],
 
-  // Japanese exploration area — trees around the perimeter
-[-42, -48], [-30, -55],
-[2, -57],[-38, -78], [-20, -112],
-[38, -65],
+  // Japanese exploration area
+  [-42, -48], [-30, -55], [2, -57],
+  [-38, -78], [-20, -112], [38, -65],
 
-// Connecting woodland — trees to encourage exploration
-[65, -42], [105, -65],
-[120, -48], [175, -35],
-[200, -48],
+  // Connecting woodland
+  [65, -42], [105, -65], [120, -48],
+  [175, -35], [200, -48],
 
-// Mountain approach — scattered trees along the foothills
-[210, -90],[290, -95],
-[330, -75],[370, -65],
-[390, -30],
+  // Mountain approach — existing positions retained
+  [210, -90], [290, -95], [330, -75],
+  [370, -65], [390, -30],
 
-// Southern woodland — more places to explore
-[75, 65],[100, 80],
-[125, 60],[245, 85],
-[265, 115],
+  // Southern woodland — existing positions retained
+  [75, 65], [100, 80], [125, 60],
+  [245, 85], [265, 115],
 ];
-    treePositions.forEach(([x, z], i) => {
-      // Slightly tapered trunks give each tree a more natural silhouette.
-      const trunkHeight = 2.1 + (i % 4) * 0.16;
-      const trunk = MeshBuilder.CreateCylinder(
-        `TreeTrunk${i}`,
-        {
-          height: trunkHeight,
-          diameterTop: 0.38,
-          diameterBottom: 0.68,
-          tessellation: 14,
-        },
-        scene
-      );
-      trunk.position.set(x, trunkHeight / 2, z);
-      trunk.rotation.z = ((i % 3) - 1) * 0.035;
-      trunk.material = woodMat;
-      shadowGenerator.addShadowCaster(trunk);
 
-      // Fine bark lines add texture without requiring image textures.
-      // They sit on the camera-facing side of the trunk and share materials.
-      for (let groove = 0; groove < 3; groove++) {
-        const barkLine = MeshBuilder.CreateCylinder(
-          `TreeBarkLine${i}_${groove}`,
-          {
-            height: trunkHeight * (0.48 + (groove % 2) * 0.12),
-            diameterTop: 0.025,
-            diameterBottom: 0.045,
-            tessellation: 5,
-          },
-          scene
-        );
-        barkLine.position.set(
-          x + (groove - 1) * 0.15,
-          trunkHeight * (0.45 + (groove % 2) * 0.04),
-          z + 0.30
-        );
-        barkLine.rotation.z = ((groove % 2) ? -0.035 : 0.025);
-        barkLine.material = groove === 1 ? barkLightMat : barkDeepMat;
-        barkLine.isPickable = false;
-        barkLine.receiveShadows = false;
-      }
+console.log("Original trees:", treePositions.length);
+console.log("Extra trees:", extraTreePositions.length);
 
-      // Short root flares make each tree feel anchored in the ground.
-      for (let root = 0; root < 3; root++) {
-        const angle = (root / 3) * Math.PI * 2 + i * 0.37;
-        const rootMesh = MeshBuilder.CreateCylinder(
-          `TreeRoot${i}_${root}`,
-          { height: 0.72, diameterTop: 0.12, diameterBottom: 0.28, tessellation: 7 },
-          scene
-        );
-        rootMesh.position.set(
-          x + Math.cos(angle) * 0.29,
-          0.17,
-          z + Math.sin(angle) * 0.29
-        );
-        rootMesh.rotation.z = Math.cos(angle) * 0.72;
-        rootMesh.rotation.x = Math.sin(angle) * 0.72;
-        rootMesh.material = root % 2 === 0 ? woodMat : barkLightMat;
-        rootMesh.isPickable = false;
-        rootMesh.receiveShadows = false;
-      }
-
-      // Overlapping rounded foliage lobes create a fuller canopy instead of
-      // one obvious sphere. Small variations keep the tree line from repeating.
-      const canopy = [
-        { x: 0, y: 0.12, z: 0, d: 2.15, mat: leafMat },
-        { x: -0.72, y: -0.12, z: 0.05, d: 1.72, mat: leafLightMat },
-        { x: 0.70, y: -0.10, z: -0.08, d: 1.78, mat: leafMat },
-        { x: 0.02, y: 0.02, z: 0.70, d: 1.62, mat: leafDeepMat },
-        { x: -0.04, y: 0.05, z: -0.68, d: 1.68, mat: leafLightMat },
-        { x: 0.02, y: 0.86, z: -0.02, d: 1.58, mat: leafMat },
-      ];
-
-      canopy.forEach((lobe, j) => {
-        const leaves = MeshBuilder.CreateSphere(
-          `TreeLeaves${i}_${j}`,
-          { diameter: lobe.d, segments: 16 },
-          scene
-        );
-        const sizeVariation = 0.94 + ((i * 7 + j * 3) % 9) * 0.015;
-        leaves.position.set(
-          x + lobe.x * sizeVariation,
-          trunkHeight + 0.35 + lobe.y * sizeVariation,
-          z + lobe.z * sizeVariation
-        );
-        leaves.scaling.set(
-          sizeVariation * (j === 0 ? 1.03 : 1),
-          sizeVariation * (0.93 + ((i + j) % 3) * 0.035),
-          sizeVariation * (0.98 + ((i + 2 * j) % 3) * 0.025)
-        );
-        leaves.material = lobe.mat;
-        leaves.rotation.x = ((i + j) % 2 ? 1 : -1) * 0.012;
-        leaves.rotation.z = ((i + j) % 3 - 1) * 0.018;
-        windSwayMeshes.push({
-          mesh: leaves,
-          baseRotationX: leaves.rotation.x,
-          baseRotationZ: leaves.rotation.z,
-          basePositionX: leaves.position.x,
-          basePositionY: leaves.position.y,
-          basePositionZ: leaves.position.z,
-          phase: i * 0.71 + j * 0.93,
-          amplitude: 0.075 + ((i + j) % 3) * 0.022,
-          positionAmplitude: 0.075 + ((i + j) % 3) * 0.018,
-          speed: 0.00072 + ((i + j) % 4) * 0.00007,
-        });
-        shadowGenerator.addShadowCaster(leaves);
-      });
-
-      // Small sunlit leaf clusters break up the canopy silhouette and add
-      // depth, while remaining subtle enough to keep the trees readable.
-      for (let accent = 0; accent < 3; accent++) {
-        const angle = (accent / 3) * Math.PI * 2 + i * 0.73;
-        const highlight = MeshBuilder.CreateSphere(
-          `TreeLeafHighlight${i}_${accent}`,
-          { diameter: 0.56 + (accent % 2) * 0.08, segments: 9 },
-          scene
-        );
-        highlight.position.set(
-          x + Math.cos(angle) * 0.77,
-          trunkHeight + 0.76 + (accent % 2) * 0.22,
-          z + Math.sin(angle) * 0.68
-        );
-        highlight.scaling.set(1.12, 0.78, 1.02);
-        highlight.material = accent === 1 ? leafLightMat : leafMat;
-        highlight.isPickable = false;
-        highlight.receiveShadows = false;
-      }
-    });
-
+{
+  // Tree placement is handled inside the forest GLB loader,
+  // after importedTreeTemplatesReady becomes true.
+  // Keep the existing coordinate arrays unchanged.
+}
+// Ground-detail pass starts immediately below this line.
     // Ground-detail pass: small, low-profile decorations make the yard feel
     // hand-crafted without obstructing movement, cat routes, or construction.
     // These use shared materials and remain non-pickable for performance.
