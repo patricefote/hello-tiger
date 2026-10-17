@@ -621,11 +621,11 @@ ground.receiveShadows = true;
         {
           name: "ReachableMountainLandscape",
           file: "landscape_forest__mountains.glb",
-          x: 180,
-          z: -25,
+          x: 220,
+          z: -55,
           targetFootprint: 450,
-          groundOffset: -25.9,
-        },
+          groundOffset: -28.5,
+       },
       ];
 
       for (const environment of environments) {
