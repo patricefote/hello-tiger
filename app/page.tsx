@@ -626,14 +626,15 @@ ground.receiveShadows = true;
           targetFootprint: 450,
           groundOffset: -28.5,
         },
-       {
-          name: "GrandmasHouse",
-          file: "dae_diorama_-_grandmas_house.glb",
-          x: -25,
-          z: -55,
-          targetFootprint: 65,
-          groundOffset: 0,
-   },
+       
+{
+  name: "GrandmasHouse",
+  file: "dae_diorama_-_grandmas_house.glb",
+  x: 400,
+  z: -145,
+  targetFootprint: 295,
+  groundOffset: -50,
+},
       ];
 
       for (const environment of environments) {
@@ -786,6 +787,41 @@ ground.receiveShadows = true;
               shadowGenerator.addShadowCaster(mesh, true);
             }
           });
+
+         if (environment.name === "GrandmasHouse") {
+  const houseBounds = root.getHierarchyBoundingVectors(true);
+
+  const marker = MeshBuilder.CreateSphere(
+    "GrandmasHouseDebugMarker",
+    { diameter: 8 },
+    scene
+  );
+
+  marker.position.set(
+    (houseBounds.min.x + houseBounds.max.x) / 2,
+    (houseBounds.min.y + houseBounds.max.y) / 2,
+    (houseBounds.min.z + houseBounds.max.z) / 2
+  );
+
+  const markerMaterial = new StandardMaterial(
+    "GrandmasHouseDebugMarkerMaterial",
+    scene
+  );
+  markerMaterial.diffuseColor = new Color3(1, 0, 1);
+  markerMaterial.emissiveColor = new Color3(1, 0, 1);
+  marker.material = markerMaterial;
+
+  console.log("GRANDMA'S HOUSE DEBUG", {
+    rootPosition: root.position.asArray(),
+    boundsMin: houseBounds.min.asArray(),
+    boundsMax: houseBounds.max.asArray(),
+    markerPosition: marker.position.asArray(),
+    meshCount: imported.meshes.length,
+    visibleMeshes: imported.meshes.filter(
+      (mesh) => mesh.isEnabled() && mesh.getTotalVertices() > 0
+    ).length,
+  });
+}
 
           console.log("HELLO TIGER! ENVIRONMENT LOADED", {
             name: environment.name,
