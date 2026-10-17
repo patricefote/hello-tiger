@@ -1251,6 +1251,26 @@ const treePositions = [
 
   // Scattered interior trees
   [-29, 12], [-7, 14], 
+
+  // Japanese exploration area — trees around the perimeter
+[-42, -48], [-30, -55],
+[2, -57],[-38, -78], [-20, -112],
+[38, -65],
+
+// Connecting woodland — trees to encourage exploration
+[65, -42], [105, -65],
+[120, -48], [175, -35],
+[200, -48],
+
+// Mountain approach — scattered trees along the foothills
+[210, -90],[290, -95],
+[330, -75],[370, -65],
+[390, -30],
+
+// Southern woodland — more places to explore
+[75, 65],[100, 80],
+[125, 60],[245, 85],
+[265, 115],
 ];
     treePositions.forEach(([x, z], i) => {
       // Slightly tapered trunks give each tree a more natural silhouette.
@@ -2288,7 +2308,8 @@ tigerModelAnimations.forEach((group) => group.stop());
     });
   });
 
-  // Cats choose resting spots near registered trees in the expanded world.
+  
+  // Cats explore the expanded world, using trees as roaming destinations.
   const cats: Cat[] = [];
 
   const catWorldBounds = {
@@ -2299,38 +2320,41 @@ tigerModelAnimations.forEach((group) => group.stop());
   };
 
   const chooseCatRestSpot = (fromX: number, fromZ: number) => {
-    const validTrees = treePositions.filter(([treeX, treeZ]) => {
-      const insideWorld =
-        treeX >= catWorldBounds.minX &&
-        treeX <= catWorldBounds.maxX &&
-        treeZ >= catWorldBounds.minZ &&
-        treeZ <= catWorldBounds.maxZ;
-
-      const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
-
-      return insideWorld && distance > 4 && distance < 35;
-    });
-
-    const allValidTrees = treePositions.filter(
-      ([treeX, treeZ]) =>
-        treeX >= catWorldBounds.minX &&
-        treeX <= catWorldBounds.maxX &&
-        treeZ >= catWorldBounds.minZ &&
-        treeZ <= catWorldBounds.maxZ
+    const allValidTrees = treePositions.filter(([treeX, treeZ]) =>
+      treeX >= catWorldBounds.minX &&
+      treeX <= catWorldBounds.maxX &&
+      treeZ >= catWorldBounds.minZ &&
+      treeZ <= catWorldBounds.maxZ
     );
 
+    // Prefer nearby trees, but occasionally encourage a longer expedition.
+    const nearbyTrees = allValidTrees.filter(([treeX, treeZ]) => {
+      const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
+      return distance > 4 && distance < 35;
+    });
+
+    const adventurousTrees = allValidTrees.filter(([treeX, treeZ]) => {
+      const distance = Math.hypot(treeX - fromX, treeZ - fromZ);
+      return distance >= 35 && distance < 100;
+    });
+
+    const roll = Math.random();
+
     const choices =
-      validTrees.length > 0
-        ? validTrees
-        : allValidTrees.length > 0
-          ? allValidTrees
-          : [[fromX, fromZ]];
+      roll < 0.7 && nearbyTrees.length > 0
+        ? nearbyTrees
+        : adventurousTrees.length > 0 && roll < 0.9
+          ? adventurousTrees
+          : allValidTrees.length > 0
+            ? allValidTrees
+            : [[fromX, fromZ] as [number, number]];
 
     const [treeX, treeZ] =
       choices[Math.floor(Math.random() * choices.length)];
 
+    // Stop near the tree rather than inside its trunk.
     const angle = Math.random() * Math.PI * 2;
-    const radius = 0.75 + Math.random() * 0.55;
+    const radius = 1.5 + Math.random() * 1.5;
 
     return {
       x: Math.max(
