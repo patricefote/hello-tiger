@@ -618,14 +618,22 @@ ground.receiveShadows = true;
           targetFootprint: 110,
           groundOffset: -15.8,
         },
-        {
+                {
           name: "ReachableMountainLandscape",
           file: "landscape_forest__mountains.glb",
           x: 220,
           z: -55,
           targetFootprint: 450,
           groundOffset: -28.5,
-       },
+        },
+       {
+          name: "GrandmasHouse",
+          file: "dae_diorama_-_grandmas_house.glb",
+          x: -25,
+          z: -55,
+          targetFootprint: 65,
+          groundOffset: 0,
+   },
       ];
 
       for (const environment of environments) {
