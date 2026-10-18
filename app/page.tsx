@@ -641,8 +641,8 @@ ground.receiveShadows = true;
   file: "dae_diorama_-_grandmas_house2.glb",
   x: -195,
   z: -95,
-  targetFootprint: 265,
-  groundOffset: -53,
+  targetFootprint: 205,
+  groundOffset: -38,
   rotationY: Math.PI / 2,
 },   ];
 
