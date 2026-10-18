@@ -606,7 +606,7 @@ ground.receiveShadows = true;
     lake.isPickable = false;
     lake.receiveShadows = false;
 
-    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS
+    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS Our MAP
     // Diagnostic mode: identify and isolate the mountain sphere.
     void (async () => {
       const environments = [
@@ -635,7 +635,16 @@ ground.receiveShadows = true;
   targetFootprint: 295,
   groundOffset: -50,
 },
-      ];
+
+{
+  name: "GrandmasHouse2",
+  file: "dae_diorama_-_grandmas_house2.glb",
+  x: -195,
+  z: -95,
+  targetFootprint: 265,
+  groundOffset: -53,
+  rotationY: Math.PI / 2,
+},   ];
 
       for (const environment of environments) {
         try {
