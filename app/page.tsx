@@ -610,14 +610,6 @@ ground.receiveShadows = true;
     // Diagnostic mode: identify and isolate the mountain sphere.
     void (async () => {
       const environments = [
-        {
-          name: "JapaneseExplorationLocation",
-          file: "an_overgrown_japanese-style_location.glb",
-          x: 10,
-          z: -72,
-          targetFootprint: 110,
-          groundOffset: -15.8,
-        },
                 {
           name: "ReachableMountainLandscape",
           file: "landscape_forest__mountains.glb",
