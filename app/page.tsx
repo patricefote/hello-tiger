@@ -606,11 +606,12 @@ ground.receiveShadows = true;
     lake.isPickable = false;
     lake.receiveShadows = false;
 
+    
     // HELLO TIGER! — EXPLORABLE ENVIRONMENTS Our MAP
     // Diagnostic mode: identify and isolate the mountain sphere.
     void (async () => {
       const environments = [
-                {
+        {
           name: "ReachableMountainLandscape",
           file: "landscape_forest__mountains.glb",
           x: 220,
@@ -618,25 +619,24 @@ ground.receiveShadows = true;
           targetFootprint: 450,
           groundOffset: -28.5,
         },
-       
-{
-  name: "GrandmasHouse",
-  file: "dae_diorama_-_grandmas_house.glb",
-  x: 400,
-  z: -145,
-  targetFootprint: 295,
-  groundOffset: -50,
-},
-
-{
-  name: "GrandmasHouse2",
-  file: "dae_diorama_-_grandmas_house2.glb",
-  x: -230,
-  z: -90,
-  targetFootprint: 242,
-  groundOffset: -25,
-  rotationY: Math.PI / 2,
-},   ];
+        {
+          name: "GrandmasHouse",
+          file: "dae_diorama_-_grandmas_house.glb",
+          x: 400,
+          z: -145,
+          targetFootprint: 295,
+          groundOffset: -50,
+        },
+        {
+          name: "GrandmasHouse2",
+          file: "dae_diorama_-_grandmas_house2.glb",
+          x: -230,
+          z: -90,
+          targetFootprint: 242,
+          groundOffset: -25,
+          rotationY: (3 * Math.PI) / 2,
+        },
+      ];
 
       for (const environment of environments) {
         try {
@@ -664,6 +664,10 @@ ground.receiveShadows = true;
           }
 
           root.name = environment.name;
+
+          // Apply configured rotation before measuring and positioning.
+          root.rotation.y = environment.rotationY ?? 0;
+          root.computeWorldMatrix(true);
 
           // Log all meshes for the mountain asset so we can identify its sphere.
           if (environment.file === "landscape_forest__mountains.glb") {
@@ -721,11 +725,8 @@ ground.receiveShadows = true;
             });
           }
 
-         
           // Hide the confirmed mountain dome without disposing it.
-          if (
-            environment.file === "landscape_forest__mountains.glb"
-          ) {
+          if (environment.file === "landscape_forest__mountains.glb") {
             imported.meshes.forEach((mesh) => {
               if (
                 mesh.name === "Sphere_Material.011_0" &&
@@ -743,7 +744,7 @@ ground.receiveShadows = true;
             });
           }
 
-          // Calculate model dimensions.
+          // Calculate model dimensions in its configured orientation.
           root.computeWorldMatrix(true);
           let bounds = root.getHierarchyBoundingVectors(true);
 
@@ -764,7 +765,7 @@ ground.receiveShadows = true;
 
           bounds = root.getHierarchyBoundingVectors(true);
 
-          // Center the environment at its configured X/Z coordinates.
+          // Center the rotated environment at its configured X/Z coordinates.
           root.position.x +=
             environment.x - (bounds.min.x + bounds.max.x) / 2;
 
@@ -772,6 +773,8 @@ ground.receiveShadows = true;
             environment.z - (bounds.min.z + bounds.max.z) / 2;
 
           // Align vertically and apply the configured ground offset.
+          root.computeWorldMatrix(true);
+          bounds = root.getHierarchyBoundingVectors(true);
           root.position.y -= bounds.min.y;
           root.position.y += environment.groundOffset;
 
@@ -789,40 +792,40 @@ ground.receiveShadows = true;
             }
           });
 
-         if (environment.name === "GrandmasHouse") {
-  const houseBounds = root.getHierarchyBoundingVectors(true);
+          if (environment.name === "GrandmasHouse") {
+            const houseBounds = root.getHierarchyBoundingVectors(true);
 
-  const marker = MeshBuilder.CreateSphere(
-    "GrandmasHouseDebugMarker",
-    { diameter: 8 },
-    scene
-  );
+            const marker = MeshBuilder.CreateSphere(
+              "GrandmasHouseDebugMarker",
+              { diameter: 8 },
+              scene
+            );
 
-  marker.position.set(
-    (houseBounds.min.x + houseBounds.max.x) / 2,
-    (houseBounds.min.y + houseBounds.max.y) / 2,
-    (houseBounds.min.z + houseBounds.max.z) / 2
-  );
+            marker.position.set(
+              (houseBounds.min.x + houseBounds.max.x) / 2,
+              (houseBounds.min.y + houseBounds.max.y) / 2,
+              (houseBounds.min.z + houseBounds.max.z) / 2
+            );
 
-  const markerMaterial = new StandardMaterial(
-    "GrandmasHouseDebugMarkerMaterial",
-    scene
-  );
-  markerMaterial.diffuseColor = new Color3(1, 0, 1);
-  markerMaterial.emissiveColor = new Color3(1, 0, 1);
-  marker.material = markerMaterial;
+            const markerMaterial = new StandardMaterial(
+              "GrandmasHouseDebugMarkerMaterial",
+              scene
+            );
+            markerMaterial.diffuseColor = new Color3(1, 0, 1);
+            markerMaterial.emissiveColor = new Color3(1, 0, 1);
+            marker.material = markerMaterial;
 
-  console.log("GRANDMA'S HOUSE DEBUG", {
-    rootPosition: root.position.asArray(),
-    boundsMin: houseBounds.min.asArray(),
-    boundsMax: houseBounds.max.asArray(),
-    markerPosition: marker.position.asArray(),
-    meshCount: imported.meshes.length,
-    visibleMeshes: imported.meshes.filter(
-      (mesh) => mesh.isEnabled() && mesh.getTotalVertices() > 0
-    ).length,
-  });
-}
+            console.log("GRANDMA'S HOUSE DEBUG", {
+              rootPosition: root.position.asArray(),
+              boundsMin: houseBounds.min.asArray(),
+              boundsMax: houseBounds.max.asArray(),
+              markerPosition: marker.position.asArray(),
+              meshCount: imported.meshes.length,
+              visibleMeshes: imported.meshes.filter(
+                (mesh) => mesh.isEnabled() && mesh.getTotalVertices() > 0
+              ).length,
+            });
+          }
 
           console.log("HELLO TIGER! ENVIRONMENT LOADED", {
             name: environment.name,
@@ -831,6 +834,7 @@ ground.receiveShadows = true;
               x: environment.x,
               z: environment.z,
               groundOffset: environment.groundOffset,
+              rotationY: environment.rotationY ?? 0,
             },
             scale,
             footprint: environment.targetFootprint,
@@ -844,97 +848,94 @@ ground.receiveShadows = true;
       }
     })();
 
+    // MEDIEVAL COUNTRYSIDE HOUSE
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "stylized_medieval_house_scene_by_jungle_jim.glb",
+          scene
+        );
 
-            // MEDIEVAL COUNTRYSIDE HOUSE
-        void (async () => {
-          try {
-            const imported = await SceneLoader.ImportMeshAsync(
-              "",
-              "/models/",
-              "stylized_medieval_house_scene_by_jungle_jim.glb",
-              scene
-            );
+        const houseRoot = imported.meshes[0];
 
-            const houseRoot = imported.meshes[0];
+        if (!houseRoot || scene.isDisposed) {
+          imported.meshes.forEach((mesh) => mesh.dispose());
+          return;
+        }
 
-            if (!houseRoot || scene.isDisposed) {
-              imported.meshes.forEach((mesh) => mesh.dispose());
-              return;
-            }
+        houseRoot.name = "MedievalCountrysideHouseRoot";
+        houseRoot.position.set(94, 0, -12);
+        houseRoot.scaling.setAll(2.5);
 
-            houseRoot.name = "MedievalCountrysideHouseRoot";
-            houseRoot.position.set(94, 0, -12);
-            houseRoot.scaling.setAll(2.5);
+        // HELLO TIGER! — Imported Material Library
+        const findImportedMaterial = (name: string) =>
+          scene.materials.find((mat) => mat.name === name) ?? null;
 
-          
-// HELLO TIGER! — Imported Material Library
-const findImportedMaterial = (name: string) =>
-  scene.materials.find((mat) => mat.name === name) ?? null;
+        rusticTimberMat = findImportedMaterial("wood_01");
+        weatheredPlanksMat = findImportedMaterial("wood_planks_09");
 
-rusticTimberMat = findImportedMaterial("wood_01");
-weatheredPlanksMat = findImportedMaterial("wood_planks_09");
+        console.log("HELLO TIGER! MATERIAL LIBRARY", {
+          rusticTimber: rusticTimberMat?.name ?? "Fallback required",
+          weatheredPlanks: weatheredPlanksMat?.name ?? "Fallback required",
+        });
 
-console.log("HELLO TIGER! MATERIAL LIBRARY", {
-  rusticTimber: rusticTimberMat?.name ?? "Fallback required",
-  weatheredPlanks: weatheredPlanksMat?.name ?? "Fallback required",
-});
+        console.log(
+          "HOUSE MESHES — SORTED BY SIZE",
+          imported.meshes
+            .filter((mesh) => mesh.getTotalVertices() > 0)
+            .map((mesh) => {
+              const bounds = mesh.getBoundingInfo().boundingBox;
 
-console.log(
-  "HOUSE MESHES — SORTED BY SIZE",
-  imported.meshes
-    .filter((mesh) => mesh.getTotalVertices() > 0)
-    .map((mesh) => {
-      const bounds = mesh.getBoundingInfo().boundingBox;
+              return {
+                name: mesh.name,
+                material: mesh.material?.name ?? "(none)",
+                sizeX: Number((bounds.extendSize.x * 2).toFixed(2)),
+                sizeY: Number((bounds.extendSize.y * 2).toFixed(2)),
+                sizeZ: Number((bounds.extendSize.z * 2).toFixed(2)),
+                center: bounds.center.asArray().map((n) => Number(n.toFixed(2))),
+              };
+            })
+            .sort(
+              (a, b) =>
+                b.sizeX * b.sizeY * b.sizeZ -
+                a.sizeX * a.sizeY * a.sizeZ
+            )
+        );
 
-      return {
-        name: mesh.name,
-        material: mesh.material?.name ?? "(none)",
-        sizeX: Number((bounds.extendSize.x * 2).toFixed(2)),
-        sizeY: Number((bounds.extendSize.y * 2).toFixed(2)),
-        sizeZ: Number((bounds.extendSize.z * 2).toFixed(2)),
-        center: bounds.center.asArray().map((n) => Number(n.toFixed(2))),
-      };
-    })
-    .sort(
-      (a, b) =>
-        b.sizeX * b.sizeY * b.sizeZ -
-        a.sizeX * a.sizeY * a.sizeZ
-    )
-);
+        imported.meshes.forEach((mesh) => {
+          // Hide the imported sand ground plane.
+          if (mesh.name === "Object_4") {
+            mesh.setEnabled(false);
+            return;
+          }
 
-            imported.meshes.forEach((mesh) => {
-              // Hide the imported sand ground plane.
-              if (mesh.name === "Object_4") {
-                mesh.setEnabled(false);
-                return;
-              }
+          // Hide the suspected forest-textured horizon dome.
+          if (
+            mesh.name === "Object_10" &&
+            mesh.parent?.name === "Sphere_4"
+          ) {
+            mesh.setEnabled(false);
+            return;
+          }
 
-              // Hide the suspected forest-textured horizon dome.
-              if (
-                mesh.name === "Object_10" &&
-                mesh.parent?.name === "Sphere_4"
-              ) {
-                mesh.setEnabled(false);
-                return;
-              }
+          // Preserve the house, smoke, and remaining decorations.
+          if (mesh.getTotalVertices() > 0) {
+            mesh.isPickable = false;
+            mesh.receiveShadows = true;
+          }
+        });
 
-              // Preserve the house, smoke, and remaining decorations.
-              if (mesh.getTotalVertices() > 0) {
-                mesh.isPickable = false;
-                mesh.receiveShadows = true;
-              }
-            });
-
-            console.log("MEDIEVAL HOUSE — DOME TEST", {
-              hiddenMeshes: ["Object_4", "Object_10"],
-              transformNodes: imported.transformNodes.map((node) => ({
-                name: node.name,
-                parent: node.parent?.name ?? "(none)",
-                position: node.getAbsolutePosition().asArray(),
-                scaling: node.scaling.asArray(),
-              })),
-            });
-
+        console.log("MEDIEVAL HOUSE — DOME TEST", {
+          hiddenMeshes: ["Object_4", "Object_10"],
+          transformNodes: imported.transformNodes.map((node) => ({
+            name: node.name,
+            parent: node.parent?.name ?? "(none)",
+            position: node.getAbsolutePosition().asArray(),
+            scaling: node.scaling.asArray(),
+          })),
+        });
       } catch (error) {
         console.error("Failed to load medieval house:", error);
       }
@@ -945,7 +946,12 @@ console.log(
     const sunMat = makeMaterial("SunnyGold", new Color3(1, 0.78, 0.2));
     sunMat.emissiveColor = new Color3(1, 0.58, 0.08);
     sunMat.disableLighting = true;
-    const sunHaloMat = makeMaterial("SunHalo", new Color3(1, 0.86, 0.42), 0.2);
+
+    const sunHaloMat = makeMaterial(
+      "SunHalo",
+      new Color3(1, 0.86, 0.42),
+      0.2
+    );
     sunHaloMat.emissiveColor = new Color3(1, 0.72, 0.25);
     sunHaloMat.disableLighting = true;
 
@@ -954,7 +960,7 @@ console.log(
       { diameter: 6.2, segments: 20 },
       scene
     );
-    sunHalo.position.set(0, 24, -30);
+    sunHalo.position.set(0, 90, -30);
     sunHalo.material = sunHaloMat;
     sunHalo.isPickable = false;
     sunHalo.receiveShadows = false;
@@ -972,7 +978,11 @@ console.log(
     const cloudMat = makeMaterial("CloudWhite", new Color3(0.98, 0.99, 1));
     cloudMat.emissiveColor = new Color3(0.38, 0.4, 0.42);
     cloudMat.disableLighting = true;
-    const cloudShadeMat = makeMaterial("CloudSoftShade", new Color3(0.78, 0.87, 0.96));
+
+    const cloudShadeMat = makeMaterial(
+      "CloudSoftShade",
+      new Color3(0.78, 0.87, 0.96)
+    );
     cloudShadeMat.disableLighting = true;
 
     const skyClouds: {
@@ -982,7 +992,15 @@ console.log(
       drift: number;
     }[] = [];
 
-    const makeCloud = (name: string, x: number, y: number, z: number, scale: number, phase: number, drift: number) => {
+    const makeCloud = (
+      name: string,
+      x: number,
+      y: number,
+      z: number,
+      scale: number,
+      phase: number,
+      drift: number
+    ) => {
       const parts: Mesh[] = [];
       const offsets = [
         [-1.25, 0, 0, 1.65, 0.72, 0.82],
@@ -990,19 +1008,26 @@ console.log(
         [0.72, 0.18, -0.03, 1.85, 0.9, 1.0],
         [1.45, -0.03, 0.04, 1.35, 0.66, 0.78],
       ];
+
       offsets.forEach(([ox, oy, oz, sx, sy, sz], index) => {
         const puff = MeshBuilder.CreateSphere(
           `${name}Puff${index}`,
           { diameter: 1, segments: 12 },
           scene
         );
-        puff.position.set(x + ox * scale, y + oy * scale, z + oz * scale);
+
+        puff.position.set(
+          x + ox * scale,
+          y + oy * scale,
+          z + oz * scale
+        );
         puff.scaling.set(sx * scale, sy * scale, sz * scale);
         puff.material = index === 0 ? cloudShadeMat : cloudMat;
         puff.isPickable = false;
         puff.receiveShadows = false;
         parts.push(puff);
       });
+
       skyClouds.push({
         parts,
         basePositions: parts.map((part) => part.position.clone()),
@@ -1011,16 +1036,16 @@ console.log(
       });
     };
 
-    // Spread clouds around the play area so they're visible as the camera rotates.
-    makeCloud("CloudNorthWest", -25, 16, -27, 1.25, 0.3, 1.0);
-    makeCloud("CloudNorthEast", 22, 19, -29, 1.05, 1.7, -0.8);
-    makeCloud("CloudWest", -32, 14, -2, 0.9, 2.4, 0.7);
-    makeCloud("CloudEast", 32, 17, 5, 1.15, 3.1, -0.65);
-    makeCloud("CloudSouthWest", -24, 18, 27, 1.0, 4.2, 0.8);
-    makeCloud("CloudSouthEast", 25, 15, 29, 1.2, 5.1, -0.7);
+    // Higher clouds spread around the play area.
+    makeCloud("CloudNorthWest", -25, 68, -27, 1.25, 0.3, 1.0);
+    makeCloud("CloudNorthEast", 22, 74, -29, 1.05, 1.7, -0.8);
+    makeCloud("CloudWest", -32, 65, -2, 0.9, 2.4, 0.7);
+    makeCloud("CloudEast", 32, 71, 5, 1.15, 3.1, -0.65);
+    makeCloud("CloudSouthWest", -24, 76, 27, 1.0, 4.2, 0.8);
+    makeCloud("CloudSouthEast", 25, 66, 29, 1.2, 5.1, -0.7);
 
     // Home: layered foundation, gable roof, framed windows, and a paneled door.
-    
+
     // Starter house imported from the stylized GLB asset.
     void (async () => {
       try {
@@ -1043,8 +1068,7 @@ console.log(
         const houseScale = 0.84;
         root.scaling.setAll(houseScale);
 
-        // Center the model, align its lowest point to the ground,
-        // and preserve the existing starter-house location at Z = 8.
+        // Preserve the existing starter-house location.
         root.position.set(-0.616, 0.898, 7.994);
 
         imported.meshes.forEach((mesh) => {
@@ -1084,7 +1108,7 @@ console.log(
             throw new Error(`Barn ${index + 1} GLB has no root mesh.`);
           }
 
-          // Three times the original scale.
+          // Preserve the existing barn scale.
           root.scaling.setAll(2.8);
           root.position.set(0, 0, 0);
 
@@ -1112,12 +1136,14 @@ console.log(
             position.z
           );
         } catch (error) {
-          console.error(`Failed to load decorative barn ${index + 1}:`, error);
+          console.error(
+            `Failed to load decorative barn ${index + 1}:`,
+            error
+          );
         }
       }
     })();
 
-     
     // Expanded tree locations.
 
     const importedTreeTemplates: TransformNode[] = [];
