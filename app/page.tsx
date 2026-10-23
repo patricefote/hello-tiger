@@ -610,7 +610,15 @@ ground.receiveShadows = true;
     // HELLO TIGER! — EXPLORABLE ENVIRONMENTS Our MAP
     // Diagnostic mode: identify and isolate the mountain sphere.
     void (async () => {
-      const environments = [
+      const environments: {
+        name: string;
+        file: string;
+        x: number;
+        z: number;
+        targetFootprint: number;
+        groundOffset: number;
+        rotationY?: number;
+      }[] = [
         {
           name: "ReachableMountainLandscape",
           file: "landscape_forest__mountains.glb",
@@ -649,6 +657,7 @@ ground.receiveShadows = true;
 
           if (scene.isDisposed) {
             imported.meshes.forEach((mesh) => mesh.dispose());
+            imported.transformNodes.forEach((node) => node.dispose());
             return;
           }
 
@@ -659,15 +668,58 @@ ground.receiveShadows = true;
 
           if (!root) {
             imported.meshes.forEach((mesh) => mesh.dispose());
+            imported.transformNodes.forEach((node) => node.dispose());
             console.error(`No root mesh found for ${environment.file}`);
             continue;
           }
 
           root.name = environment.name;
 
-          // Apply configured rotation before measuring and positioning.
-          root.rotation.y = environment.rotationY ?? 0;
+          // Measure the original model before applying the group rotation.
           root.computeWorldMatrix(true);
+          let bounds = root.getHierarchyBoundingVectors(true);
+
+          const originalCenter = new Vector3(
+            (bounds.min.x + bounds.max.x) / 2,
+            (bounds.min.y + bounds.max.y) / 2,
+            (bounds.min.z + bounds.max.z) / 2
+          );
+
+          // Create a pivot at the visible model center.
+          // Parenting the imported root to this pivot makes the rotation
+          // apply to the entire imported hierarchy.
+          let environmentPivot: TransformNode | null = null;
+
+          if (environment.rotationY) {
+            environmentPivot = new TransformNode(
+              `${environment.name}RotationPivot`,
+              scene
+            );
+
+            environmentPivot.position.copyFrom(originalCenter);
+            environmentPivot.rotation.y = environment.rotationY;
+
+            // Preserve the imported root's world transform when reparenting.
+            root.setParent(environmentPivot);
+
+            // Move the pivot to the original model center while keeping
+            // the imported model centered on that pivot.
+            root.position.subtractInPlace(originalCenter);
+            root.computeWorldMatrix(true);
+            environmentPivot.computeWorldMatrix(true);
+
+            console.log("ENVIRONMENT GROUP ROTATION", {
+              name: environment.name,
+              rotationRadians: environment.rotationY,
+              rotationDegrees:
+                (environment.rotationY * 180) / Math.PI,
+              pivotPosition: environmentPivot.position.asArray(),
+            });
+          }
+
+          // Use the pivot as the placement/scaling root for rotated assets.
+          const placementRoot: TransformNode | Mesh =
+            environmentPivot ?? root;
 
           // Log all meshes for the mountain asset so we can identify its sphere.
           if (environment.file === "landscape_forest__mountains.glb") {
@@ -744,9 +796,9 @@ ground.receiveShadows = true;
             });
           }
 
-          // Calculate model dimensions in its configured orientation.
-          root.computeWorldMatrix(true);
-          let bounds = root.getHierarchyBoundingVectors(true);
+          // Measure the configured orientation and size.
+          placementRoot.computeWorldMatrix(true);
+          bounds = root.getHierarchyBoundingVectors(true);
 
           const sizeX = bounds.max.x - bounds.min.x;
           const sizeZ = bounds.max.z - bounds.min.z;
@@ -755,30 +807,32 @@ ground.receiveShadows = true;
           if (!Number.isFinite(footprint) || footprint <= 0) {
             console.error(`Invalid model dimensions: ${environment.file}`);
             imported.meshes.forEach((mesh) => mesh.dispose());
+            environmentPivot?.dispose();
             continue;
           }
 
-          // Scale the environment to its configured footprint.
+          // Scale the entire environment group to its configured footprint.
           const scale = environment.targetFootprint / footprint;
-          root.scaling.scaleInPlace(scale);
-          root.computeWorldMatrix(true);
+          placementRoot.scaling.scaleInPlace(scale);
+          placementRoot.computeWorldMatrix(true);
 
           bounds = root.getHierarchyBoundingVectors(true);
 
           // Center the rotated environment at its configured X/Z coordinates.
-          root.position.x +=
+          placementRoot.position.x +=
             environment.x - (bounds.min.x + bounds.max.x) / 2;
 
-          root.position.z +=
+          placementRoot.position.z +=
             environment.z - (bounds.min.z + bounds.max.z) / 2;
 
           // Align vertically and apply the configured ground offset.
-          root.computeWorldMatrix(true);
+          placementRoot.computeWorldMatrix(true);
           bounds = root.getHierarchyBoundingVectors(true);
-          root.position.y -= bounds.min.y;
-          root.position.y += environment.groundOffset;
 
-          root.computeWorldMatrix(true);
+          placementRoot.position.y -= bounds.min.y;
+          placementRoot.position.y += environment.groundOffset;
+
+          placementRoot.computeWorldMatrix(true);
 
           // Configure visible environment meshes and their shadows.
           imported.meshes.forEach((mesh) => {
@@ -886,15 +940,17 @@ ground.receiveShadows = true;
           imported.meshes
             .filter((mesh) => mesh.getTotalVertices() > 0)
             .map((mesh) => {
-              const bounds = mesh.getBoundingInfo().boundingBox;
+              const meshBounds = mesh.getBoundingInfo().boundingBox;
 
               return {
                 name: mesh.name,
                 material: mesh.material?.name ?? "(none)",
-                sizeX: Number((bounds.extendSize.x * 2).toFixed(2)),
-                sizeY: Number((bounds.extendSize.y * 2).toFixed(2)),
-                sizeZ: Number((bounds.extendSize.z * 2).toFixed(2)),
-                center: bounds.center.asArray().map((n) => Number(n.toFixed(2))),
+                sizeX: Number((meshBounds.extendSize.x * 2).toFixed(2)),
+                sizeY: Number((meshBounds.extendSize.y * 2).toFixed(2)),
+                sizeZ: Number((meshBounds.extendSize.z * 2).toFixed(2)),
+                center: meshBounds.center.asArray().map((n) =>
+                  Number(n.toFixed(2))
+                ),
               };
             })
             .sort(
@@ -960,7 +1016,7 @@ ground.receiveShadows = true;
       { diameter: 6.2, segments: 20 },
       scene
     );
-    sunHalo.position.set(0, 90, -30);
+    sunHalo.position.set(0, 80, -30);
     sunHalo.material = sunHaloMat;
     sunHalo.isPickable = false;
     sunHalo.receiveShadows = false;
@@ -1044,52 +1100,85 @@ ground.receiveShadows = true;
     makeCloud("CloudSouthWest", -24, 76, 27, 1.0, 4.2, 0.8);
     makeCloud("CloudSouthEast", 25, 66, 29, 1.2, 5.1, -0.7);
 
-    // Home: layered foundation, gable roof, framed windows, and a paneled door.
+   // STARTER HOUSE — SMALL HUT SHELTER
+void (async () => {
+  try {
+    const imported = await SceneLoader.ImportMeshAsync(
+      "",
+      "/models/",
+      "small_hut_shelter_house_3d_model_free.glb",
+      scene
+    );
 
-    // Starter house imported from the stylized GLB asset.
-    void (async () => {
-      try {
-        const imported = await SceneLoader.ImportMeshAsync(
-          "",
-          "/models/",
-          "work_33_stylized_houses_blender3d.glb",
-          scene
-        );
+    const root =
+      imported.meshes.find((mesh) => mesh.name === "__root__") ??
+      imported.meshes.find((mesh) => mesh.parent === null) ??
+      imported.meshes[0];
 
-        const root =
-          imported.meshes.find((mesh) => mesh.name === "__root__") ??
-          imported.meshes[0];
+    if (!root) {
+      throw new Error("Small hut GLB did not provide a root mesh.");
+    }
 
-        if (!root) {
-          throw new Error("House GLB did not provide a root mesh.");
-        }
+    root.name = "StarterHouseRoot";
 
-        // Scale the complete asset to fit the starter-house footprint.
-        const houseScale = 0.84;
-        root.scaling.setAll(houseScale);
+    // Increase the current scale by 1.8 times: 8.5 × 1.8 = 15.3.
+    root.scaling.setAll(15.3);
 
-        // Preserve the existing starter-house location.
-        root.position.set(-0.616, 0.898, 7.994);
+    // Rotate 90 degrees counterclockwise when viewed from above.
+    root.rotation.y = -Math.PI / 2;
 
-        imported.meshes.forEach((mesh) => {
-          if (mesh.getTotalVertices() > 0) {
-            mesh.receiveShadows = true;
-            shadowGenerator.addShadowCaster(mesh);
-          }
-        });
+    // Initialize transforms before calculating the enlarged, rotated bounds.
+    root.position.set(0, 0, 0);
+    root.computeWorldMatrix(true);
 
-        console.log("Starter house GLB loaded and positioned.");
-      } catch (error) {
-        console.error("Failed to load starter house GLB:", error);
+    let bounds = root.getHierarchyBoundingVectors(true);
+
+    // Center the hut at its original spawn-house location.
+    const centerX = (bounds.min.x + bounds.max.x) / 2;
+    const centerZ = (bounds.min.z + bounds.max.z) / 2;
+
+    // Place the bottom of the hut at ground height Y = 0.898.
+    root.position.set(
+      -0.616 - centerX,
+      0.898 - bounds.min.y,
+      7.994 - centerZ
+    );
+
+    root.computeWorldMatrix(true);
+
+    // Recalculate bounds after positioning and correct any remaining
+    // vertical offset so the hut's lowest point meets the ground.
+    bounds = root.getHierarchyBoundingVectors(true);
+    root.position.y += 0.898 - bounds.min.y - 0.898;
+    root.computeWorldMatrix(true);
+
+    imported.meshes.forEach((mesh) => {
+      if (mesh.getTotalVertices() > 0) {
+        mesh.receiveShadows = true;
+        shadowGenerator.addShadowCaster(mesh);
       }
-    })();
+    });
 
+    bounds = root.getHierarchyBoundingVectors(true);
+
+    console.log("Small hut starter house loaded.", {
+      meshCount: imported.meshes.length,
+      position: root.position.asArray(),
+      scale: root.scaling.asArray(),
+      rotationY: root.rotation.y,
+      boundsMin: bounds.min.asArray(),
+      boundsMax: bounds.max.asArray(),
+    });
+  } catch (error) {
+    console.error("Failed to load small hut starter house:", error);
+  }
+})();
     // Two decorative barn landmarks — scenery only, not player-built.
     void (async () => {
       const barnPositions = [
-        { x: -8, z: 8 },
-        { x: -19, z: 13 },
-      ];
+       { x: -15, z: 19 },
+       { x: -34, z: 19 },
+           ];
 
       for (const [index, position] of barnPositions.entries()) {
         try {
@@ -1108,12 +1197,15 @@ ground.receiveShadows = true;
             throw new Error(`Barn ${index + 1} GLB has no root mesh.`);
           }
 
-          // Preserve the existing barn scale.
-          root.scaling.setAll(2.8);
+                   // Scale the decorative barn.
+          root.scaling.setAll(2.5);
           root.position.set(0, 0, 0);
 
+          // Calculate the enlarged barn's bounds.
+          root.computeWorldMatrix(true);
+          let bounds = root.getHierarchyBoundingVectors(true);
+
           // Center the barn horizontally and align its base to the ground.
-          const bounds = root.getHierarchyBoundingVectors(true);
           const centerX = (bounds.min.x + bounds.max.x) / 2;
           const centerZ = (bounds.min.z + bounds.max.z) / 2;
 
@@ -1122,6 +1214,14 @@ ground.receiveShadows = true;
             -bounds.min.y,
             position.z - centerZ
           );
+
+          // Refresh world matrices and verify final ground alignment.
+          root.computeWorldMatrix(true);
+          bounds = root.getHierarchyBoundingVectors(true);
+
+          // Correct any remaining vertical offset.
+          root.position.y -= bounds.min.y;
+          root.computeWorldMatrix(true);
 
           imported.meshes.forEach((mesh) => {
             if (mesh.getTotalVertices() > 0) {
@@ -1132,8 +1232,12 @@ ground.receiveShadows = true;
 
           console.log(
             `Decorative barn ${index + 1} loaded at:`,
-            position.x,
-            position.z
+            root.position.x,
+            root.position.y,
+            root.position.z,
+            "Final ground bounds:",
+            bounds.min.y,
+            bounds.max.y
           );
         } catch (error) {
           console.error(
