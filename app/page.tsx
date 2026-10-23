@@ -1248,6 +1248,88 @@ void (async () => {
       }
     })();
 
+ // TREEHOUSE — NORTHWEST EDGE OF THE MAP
+void (async () => {
+  try {
+    const imported = await SceneLoader.ImportMeshAsync(
+      "",
+      "/models/",
+      "treehouse.glb",
+      scene
+    );
+
+    // Create a shared parent for the entire imported model.
+    const root = new TransformNode("TreehouseLandmarkRoot", scene);
+
+    imported.meshes.forEach((mesh) => {
+      if (mesh.parent === null) {
+        mesh.parent = root;
+      }
+    });
+
+    // Rotate the complete treehouse clockwise by 90 degrees.
+    root.rotation.y = Math.PI / 2;
+    root.scaling.setAll(1);
+    root.position.set(0, 0, 0);
+    root.computeWorldMatrix(true);
+
+    // Measure the model after rotation.
+    let bounds = root.getHierarchyBoundingVectors(true);
+    const sizeX = bounds.max.x - bounds.min.x;
+    const sizeZ = bounds.max.z - bounds.min.z;
+    const footprint = Math.max(sizeX, sizeZ);
+
+    if (!Number.isFinite(footprint) || footprint <= 0) {
+      throw new Error("Treehouse has invalid model dimensions.");
+    }
+
+    // Scale the treehouse to a 34-unit footprint.
+    root.scaling.setAll(34 / footprint);
+    root.computeWorldMatrix(true);
+
+    // Calculate bounds with the final scale and rotation.
+    bounds = root.getHierarchyBoundingVectors(true);
+
+    const centerX = (bounds.min.x + bounds.max.x) / 2;
+    const centerZ = (bounds.min.z + bounds.max.z) / 2;
+
+    // Position at the chosen map location.
+    root.position.set(
+      20 - centerX,
+      0,
+      -135 - centerZ
+    );
+
+    root.computeWorldMatrix(true);
+
+    // Align the model's lowest world-space point to the ground,
+    // then lower it another 5 units to correct the visible floating.
+    bounds = root.getHierarchyBoundingVectors(true);
+    root.position.y -= bounds.min.y + 5;
+    root.computeWorldMatrix(true);
+
+    // Enable shadows on all geometry.
+    imported.meshes.forEach((mesh) => {
+      if (mesh.getTotalVertices() > 0) {
+        mesh.receiveShadows = true;
+        shadowGenerator.addShadowCaster(mesh);
+      }
+    });
+
+    // Report final bounds for further ground adjustment if needed.
+    bounds = root.getHierarchyBoundingVectors(true);
+
+    console.log("Treehouse loaded:", {
+      position: root.position.asArray(),
+      rotationY: root.rotation.y,
+      scale: root.scaling.asArray(),
+      lowestPointY: bounds.min.y,
+      highestPointY: bounds.max.y,
+    });
+  } catch (error) {
+    console.error("Failed to load treehouse:", error);
+  }
+})();
     // Expanded tree locations.
 
     const importedTreeTemplates: TransformNode[] = [];
