@@ -3217,7 +3217,7 @@ tigerModelAnimations.forEach((group) => group.stop());
       }
 
       // A small woodland animal, normalized to 1.35 world units tall.
-      foxRoot.scaling.setAll(2.35 / foxHeight);
+      foxRoot.scaling.setAll(1.65 / foxHeight);
       foxRoot.computeWorldMatrix(true);
       foxBounds = foxRoot.getHierarchyBoundingVectors(true);
       foxRoot.position.y -= foxBounds.min.y;
