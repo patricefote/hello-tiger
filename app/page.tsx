@@ -2953,6 +2953,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     });
   };
    
+
   // CREATE THE THREE CATS
   createCat("Mittens", -4, -3, whiteMat);
   createCat("Pumpkin", 5, -5, orangeMat);
@@ -2960,6 +2961,17 @@ tigerModelAnimations.forEach((group) => group.stop());
 
   // LOAD CUSTOM MODELS FOR ALL THREE CATS
   void (async () => {
+    type CatAnimationState = {
+      idle?: (typeof cats)[number]["animationGroups"][number];
+      movement?: (typeof cats)[number]["animationGroups"][number];
+      active?: (typeof cats)[number]["animationGroups"][number];
+      lastX: number;
+      lastZ: number;
+      moving: boolean;
+    };
+
+    const animationStates = new Map<string, CatAnimationState>();
+
     const catModels = [
       {
         name: "Mittens",
@@ -2970,10 +2982,10 @@ tigerModelAnimations.forEach((group) => group.stop());
       },
       {
         name: "Pumpkin",
-        file: "cat_in_motion_3d_model_free.glb",
+        file: "an_animated_cat.glb",
         rootName: "PumpkinModelRoot",
         targetHeight: 1.1,
-        extraLift: 0.35,
+        extraLift: 0,
       },
       {
         name: "Shadow",
@@ -3025,19 +3037,16 @@ tigerModelAnimations.forEach((group) => group.stop());
           );
         }
 
-        // Normalize the model's height.
+        // Normalize model height.
         const scaleFactor = config.targetHeight / originalHeight;
         visualRoot.scaling.setAll(scaleFactor);
         visualRoot.computeWorldMatrix(true);
 
-        // Recalculate world bounds after scaling.
+        // Align model geometry with the ground.
         bounds = visualRoot.getHierarchyBoundingVectors(true);
-
-        // Ground the actual imported geometry, not the model's origin.
         visualRoot.position.y -= bounds.min.y;
         visualRoot.computeWorldMatrix(true);
 
-        // Give Pumpkin additional clearance above the grass.
         if (config.extraLift > 0) {
           visualRoot.position.y += config.extraLift;
           visualRoot.computeWorldMatrix(true);
@@ -3053,23 +3062,42 @@ tigerModelAnimations.forEach((group) => group.stop());
           }
         });
 
-        // Connect the imported model to the existing cat system.
+        // Connect model to the existing cat system.
         cat.modelRoot = visualRoot;
         cat.animationGroups = imported.animationGroups;
 
-        // Prefer a stationary animation so the paws don't dip
-        // underground during a walk/run cycle while the cat is idle.
-        const animation =
-          imported.animationGroups.find((group) =>
+        const groups = imported.animationGroups;
+
+        // Pumpkin's Take 001 is her confirmed idle animation.
+        const idle =
+          groups.find((group) =>
             /idle|stand|breath/i.test(group.name)
           ) ??
-          imported.animationGroups.find((group) =>
-            /walk|run|move/i.test(group.name)
-          );
+          (config.name === "Pumpkin"
+            ? groups.find((group) => group.name === "Take 001") ??
+              groups[0]
+            : undefined);
 
-        if (animation) {
-          animation.start(true);
+        // Only use an explicitly named locomotion clip for movement.
+        const movement = groups.find((group) =>
+          /walk|run|move|locomotion/i.test(group.name)
+        );
+
+        // Start the initial idle clip without repeatedly restarting it.
+        if (idle) {
+          idle.start(true);
+          idle.enableBlending = true;
+          idle.blendingSpeed = 0.08;
         }
+
+        animationStates.set(config.name, {
+          idle,
+          movement,
+          active: idle,
+          lastX: cat.x,
+          lastZ: cat.z,
+          moving: false,
+        });
 
         // Hide procedural parts only after the replacement loads.
         cat.parts.forEach((part) => {
@@ -3077,13 +3105,14 @@ tigerModelAnimations.forEach((group) => group.stop());
           shadowGenerator.removeShadowCaster(part);
         });
 
-        // Log the final position and bounds for troubleshooting.
         visualRoot.computeWorldMatrix(true);
         bounds = visualRoot.getHierarchyBoundingVectors(true);
 
         console.info(`${config.name} loaded:`, {
           file: config.file,
-          animation: animation?.name ?? "none",
+          idle: idle?.name ?? "none",
+          movement: movement?.name ?? "none",
+          animationCount: groups.length,
           lowestPointY: bounds.min.y,
           highestPointY: bounds.max.y,
           rootPosition: visualRoot.position.asArray(),
@@ -3096,6 +3125,180 @@ tigerModelAnimations.forEach((group) => group.stop());
           error
         );
       }
+    }
+
+    // Switch animation only when a cat changes between moving and stopped.
+    // The existing cat AI remains responsible for movement and target selection.
+    scene.onBeforeRenderObservable.add(() => {
+      for (const cat of cats) {
+        const state = animationStates.get(cat.name);
+        if (!state || !cat.modelRoot) continue;
+
+        const dx = cat.x - state.lastX;
+        const dz = cat.z - state.lastZ;
+        const distanceMoved = Math.hypot(dx, dz);
+
+        state.lastX = cat.x;
+        state.lastZ = cat.z;
+
+        // Ignore tiny coordinate fluctuations.
+        const movingNow = distanceMoved > 0.001;
+
+        if (movingNow === state.moving) continue;
+
+        state.moving = movingNow;
+
+        const nextAnimation = movingNow
+          ? state.movement ?? state.idle
+          : state.idle ?? state.movement;
+
+        if (!nextAnimation || nextAnimation === state.active) continue;
+
+        // Fade the previous clip out and the new clip in.
+        if (state.active) {
+          state.active.stop();
+        }
+
+        nextAnimation.enableBlending = true;
+        nextAnimation.blendingSpeed = 0.08;
+        nextAnimation.start(true);
+
+        state.active = nextAnimation;
+
+        console.debug(
+          `${cat.name} animation switched:`,
+          nextAnimation.name,
+          movingNow ? "(moving)" : "(idle)"
+        );
+      }
+    });
+  })();
+
+
+  // FOX COMPANION — an independently animated world animal.
+  // This controller is separate from the cats and does not alter their AI.
+  void (async () => {
+    let foxRoot: TransformNode | null = null;
+
+    try {
+      const imported = await SceneLoader.ImportMeshAsync(
+        "",
+        "/models/",
+        "bake3d-fox-animated.glb",
+        scene
+      );
+
+      if (scene.isDisposed) {
+        imported.meshes.forEach((mesh) => mesh.dispose());
+        imported.transformNodes.forEach((node) => node.dispose());
+        return;
+      }
+
+      foxRoot = new TransformNode("WorldFoxRoot", scene);
+      imported.meshes.forEach((mesh) => {
+        if (mesh.parent === null) mesh.parent = foxRoot!;
+        mesh.isPickable = false;
+        if (mesh.getTotalVertices() > 0) {
+          mesh.receiveShadows = true;
+          shadowGenerator.addShadowCaster(mesh);
+        }
+      });
+
+      // Place the fox near the outer edge of the forest, away from the lake.
+      foxRoot.position.set(36, 0, 18);
+      foxRoot.rotation.set(0, 0, 0);
+      foxRoot.scaling.setAll(1);
+      foxRoot.computeWorldMatrix(true);
+
+      let foxBounds = foxRoot.getHierarchyBoundingVectors(true);
+      const foxHeight = foxBounds.max.y - foxBounds.min.y;
+      if (!Number.isFinite(foxHeight) || foxHeight <= 0.001) {
+        throw new Error(`Invalid fox model height: ${foxHeight}`);
+      }
+
+      // A small woodland animal, normalized to 1.35 world units tall.
+      foxRoot.scaling.setAll(2.35 / foxHeight);
+      foxRoot.computeWorldMatrix(true);
+      foxBounds = foxRoot.getHierarchyBoundingVectors(true);
+      foxRoot.position.y -= foxBounds.min.y;
+      foxRoot.computeWorldMatrix(true);
+
+      const walk = imported.animationGroups.find((group) =>
+        /^walk$/i.test(group.name)
+      );
+      const lookAround = imported.animationGroups.find((group) =>
+        /look around/i.test(group.name)
+      );
+      const tailWag = imported.animationGroups.find((group) =>
+        /tail wag/i.test(group.name)
+      );
+
+      // Look and tail motion can run together while the fox pauses.
+      lookAround?.start(true);
+      tailWag?.start(true);
+
+      let targetX = 32 + Math.random() * 8;
+      let targetZ = 14 + Math.random() * 8;
+      let pauseSeconds = 1.5;
+      let isWalking = false;
+
+      const foxObserver = scene.onBeforeRenderObservable.add(() => {
+        if (!foxRoot || scene.isDisposed) return;
+
+        const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
+        if (pauseSeconds > 0) {
+          pauseSeconds -= dt;
+          if (isWalking) {
+            walk?.stop();
+            isWalking = false;
+            lookAround?.start(true);
+            tailWag?.start(true);
+          }
+          if (pauseSeconds <= 0) {
+            targetX = 30 + Math.random() * 12;
+            targetZ = 12 + Math.random() * 14;
+          }
+          return;
+        }
+
+        const dx = targetX - foxRoot.position.x;
+        const dz = targetZ - foxRoot.position.z;
+        const distance = Math.hypot(dx, dz);
+
+        if (distance < 0.35) {
+          pauseSeconds = 2 + Math.random() * 2.5;
+          return;
+        }
+
+        if (!isWalking) {
+          lookAround?.stop();
+          walk?.start(true);
+          isWalking = true;
+        }
+
+        foxRoot.rotation.y = Math.atan2(dx, dz);
+        const step = Math.min(distance, 0.7 * dt);
+        foxRoot.position.x += (dx / distance) * step;
+        foxRoot.position.z += (dz / distance) * step;
+      });
+
+      console.info("HELLO TIGER! FOX LOADED", {
+        file: "bake3d-fox-animated.glb",
+        position: foxRoot.position.asArray(),
+        scale: foxRoot.scaling.asArray(),
+        animations: imported.animationGroups.map((group) => group.name),
+        walkAvailable: Boolean(walk),
+        lookAroundAvailable: Boolean(lookAround),
+        tailWagAvailable: Boolean(tailWag),
+      });
+
+      // Keep the observer scoped to this scene's lifetime.
+      scene.onDisposeObservable.add(() => {
+        scene.onBeforeRenderObservable.remove(foxObserver);
+      });
+    } catch (error) {
+      foxRoot?.dispose();
+      console.error("Failed to load world fox:", error);
     }
   })();
 
