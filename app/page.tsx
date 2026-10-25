@@ -2651,112 +2651,150 @@ tigerModelAnimations.forEach((group) => group.stop());
       barnIndex: null,
     });
   };
-
+   
+  // CREATE THE THREE CATS
   createCat("Mittens", -4, -3, whiteMat);
   createCat("Pumpkin", 5, -5, orangeMat);
   createCat("Shadow", -7, 1, grayMat);
 
-  // Load the animated model for Mittens only; retain procedural fallbacks.
+  // LOAD CUSTOM MODELS FOR ALL THREE CATS
   void (async () => {
-    const cat = cats.find((entry) => entry.name === "Mittens");
-    if (!cat) return;
+    const catModels = [
+      {
+        name: "Mittens",
+        file: "cat.glb",
+        rootName: "MittensModelRoot",
+        targetHeight: 1.1,
+        extraLift: 0,
+      },
+      {
+        name: "Pumpkin",
+        file: "cat_in_motion_3d_model_free.glb",
+        rootName: "PumpkinModelRoot",
+        targetHeight: 1.1,
+        extraLift: 0.35,
+      },
+      {
+        name: "Shadow",
+        file: "shadow.glb",
+        rootName: "ShadowModelRoot",
+        targetHeight: 1.1,
+        extraLift: 0,
+      },
+    ];
 
-    try {
-      const imported = await SceneLoader.ImportMeshAsync(
-        "",
-        "/models/",
-        "an_animated_cat.glb",
-        scene
-      );
+    for (const config of catModels) {
+      const cat = cats.find((entry) => entry.name === config.name);
+      if (!cat) continue;
 
-      const modelMeshes = imported.meshes.filter(
-        (mesh) => mesh.getTotalVertices() > 0
-      );
+      let visualRoot: TransformNode | null = null;
 
-      if (modelMeshes.length === 0) {
-        throw new Error("The GLB contains no renderable meshes.");
-      }
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          config.file,
+          scene
+        );
 
-      let minY = Number.POSITIVE_INFINITY;
-      let maxY = Number.NEGATIVE_INFINITY;
+        visualRoot = new TransformNode(config.rootName, scene);
 
-      modelMeshes.forEach((mesh) => {
-        mesh.computeWorldMatrix(true);
-        const bounds = mesh.getBoundingInfo().boundingBox;
-        minY = Math.min(minY, bounds.minimumWorld.y);
-        maxY = Math.max(maxY, bounds.maximumWorld.y);
-      });
-
-      const modelHeight = maxY - minY;
-      if (!Number.isFinite(modelHeight) || modelHeight <= 0.001) {
-        throw new Error("Could not determine the animated cat height.");
-      }
-
-      const scale = 1.1 / modelHeight;
-      const visualRoot = new TransformNode("MittensAnimatedRoot", scene);
-      visualRoot.position.set(cat.x, 0, cat.z);
-
-      const importedRoot =
-        imported.meshes.find((mesh) => mesh.name === "__root__") ??
-        imported.meshes.find((mesh) => mesh.parent === null);
-
-      if (importedRoot) {
-        importedRoot.parent = visualRoot;
-        importedRoot.scaling.scaleInPlace(scale);
-        importedRoot.position.y += -minY * scale;
-      } else {
-        modelMeshes.forEach((mesh) => {
-          if (!mesh.parent) {
+        // Parent the imported model's top-level meshes to one root.
+        imported.meshes.forEach((mesh) => {
+          if (mesh.parent === null) {
             mesh.parent = visualRoot;
-            mesh.scaling.scaleInPlace(scale);
           }
         });
-      }
 
-      imported.meshes.forEach((mesh) => {
-        if (mesh !== importedRoot && !mesh.parent) {
-          mesh.parent = visualRoot;
+        visualRoot.position.set(cat.x, 0, cat.z);
+        visualRoot.rotation.set(0, 0, 0);
+        visualRoot.scaling.setAll(1);
+        visualRoot.computeWorldMatrix(true);
+
+        // Measure the imported hierarchy before scaling.
+        let bounds = visualRoot.getHierarchyBoundingVectors(true);
+        const originalHeight = bounds.max.y - bounds.min.y;
+
+        if (
+          !Number.isFinite(originalHeight) ||
+          originalHeight <= 0.001
+        ) {
+          throw new Error(
+            `Invalid model height for ${config.name}: ${originalHeight}`
+          );
         }
 
-        if (mesh.getTotalVertices() > 0) {
+        // Normalize the model's height.
+        const scaleFactor = config.targetHeight / originalHeight;
+        visualRoot.scaling.setAll(scaleFactor);
+        visualRoot.computeWorldMatrix(true);
+
+        // Recalculate world bounds after scaling.
+        bounds = visualRoot.getHierarchyBoundingVectors(true);
+
+        // Ground the actual imported geometry, not the model's origin.
+        visualRoot.position.y -= bounds.min.y;
+        visualRoot.computeWorldMatrix(true);
+
+        // Give Pumpkin additional clearance above the grass.
+        if (config.extraLift > 0) {
+          visualRoot.position.y += config.extraLift;
+          visualRoot.computeWorldMatrix(true);
+        }
+
+        // Configure imported meshes and shadows.
+        imported.meshes.forEach((mesh) => {
           mesh.isPickable = false;
-          shadowGenerator.addShadowCaster(mesh);
+
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        // Connect the imported model to the existing cat system.
+        cat.modelRoot = visualRoot;
+        cat.animationGroups = imported.animationGroups;
+
+        // Prefer a stationary animation so the paws don't dip
+        // underground during a walk/run cycle while the cat is idle.
+        const animation =
+          imported.animationGroups.find((group) =>
+            /idle|stand|breath/i.test(group.name)
+          ) ??
+          imported.animationGroups.find((group) =>
+            /walk|run|move/i.test(group.name)
+          );
+
+        if (animation) {
+          animation.start(true);
         }
-      });
 
-      cat.modelRoot = visualRoot;
-      cat.animationGroups = imported.animationGroups;
+        // Hide procedural parts only after the replacement loads.
+        cat.parts.forEach((part) => {
+          part.setEnabled(false);
+          shadowGenerator.removeShadowCaster(part);
+        });
 
-      const animation = cat.animationGroups.find((group) =>
-        /idle|stand|breath/i.test(group.name)
-      );
+        // Log the final position and bounds for troubleshooting.
+        visualRoot.computeWorldMatrix(true);
+        bounds = visualRoot.getHierarchyBoundingVectors(true);
 
-      if (animation) {
-        animation.start(true);
-      } else {
-        console.warn(
-          `No idle animation found for ${cat.name}. Available animations:`,
-          cat.animationGroups.map((group) => group.name)
+        console.info(`${config.name} loaded:`, {
+          file: config.file,
+          animation: animation?.name ?? "none",
+          lowestPointY: bounds.min.y,
+          highestPointY: bounds.max.y,
+          rootPosition: visualRoot.position.asArray(),
+        });
+      } catch (error) {
+        visualRoot?.dispose();
+
+        console.error(
+          `Failed to load ${config.name} (${config.file}); keeping procedural fallback:`,
+          error
         );
       }
-
-      // Keep the procedural fallback available until the model loads.
-      cat.parts.forEach((part) => {
-        part.setEnabled(false);
-        shadowGenerator.removeShadowCaster(part);
-      });
-
-      console.info(
-        "Animated cat loaded:",
-        cat.name,
-        "animation:",
-        animation?.name ?? "none"
-      );
-    } catch (error) {
-      console.error(
-        "Could not load the animated cat; using the procedural fallback.",
-        error
-      );
     }
   })();
 
