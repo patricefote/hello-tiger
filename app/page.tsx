@@ -1582,6 +1582,7 @@ void (async () => {
   });
 })();
 
+
 const horsePathIsClear = (
   fromX: number,
   fromZ: number,
@@ -1598,17 +1599,13 @@ const horsePathIsClear = (
     ...extraTreePositions,
   ];
 
-  const fixedHorseObstacles: {
-    x: number;
-    z: number;
-    radius: number;
-  }[] = [
-    { x: -0.6, z: 8, radius: 7 },    // Starter hut
-    { x: 94, z: -12, radius: 10 },   // Medieval house
-    { x: 65, z: 35, radius: 10 },    // Fantasy house
-    { x: 20, z: -135, radius: 12 },  // Treehouse
-    { x: -15, z: 19, radius: 5 },    // Decorative barn
-    { x: -34, z: 19, radius: 5 },    // Decorative barn
+  const fixedHorseObstacles = [
+    { x: -0.6, z: 8, radius: 7 },
+    { x: 94, z: -12, radius: 10 },
+    { x: 65, z: 35, radius: 10 },
+    { x: 20, z: -135, radius: 12 },
+    { x: -15, z: 19, radius: 5 },
+    { x: -34, z: 19, radius: 5 },
   ];
 
   for (let i = 1; i <= samples; i++) {
@@ -1616,8 +1613,6 @@ const horsePathIsClear = (
     const x = fromX + moveX * t;
     const z = fromZ + moveZ * t;
 
-    // Avoid trees, while allowing the horse to escape
-    // if it starts inside a tree's clearance radius.
     for (const [treeX, treeZ] of allTrees) {
       const startDistance = Math.hypot(
         fromX - treeX,
@@ -1635,13 +1630,10 @@ const horsePathIsClear = (
           sampleDistance > startDistance &&
           (x - treeX) * moveX + (z - treeZ) * moveZ > 0;
 
-        if (!movingAway) {
-          return false;
-        }
+        if (!movingAway) return false;
       }
     }
 
-    // Avoid fixed scenery.
     for (const obstacle of fixedHorseObstacles) {
       if (
         Math.hypot(x - obstacle.x, z - obstacle.z) <
@@ -1651,7 +1643,6 @@ const horsePathIsClear = (
       }
     }
 
-    // Avoid player-built barns.
     for (const barn of barns) {
       if (Math.hypot(x - barn.x, z - barn.z) < 5.2) {
         return false;
@@ -1664,10 +1655,13 @@ const horsePathIsClear = (
 
 // FREE-ROAMING WORLD HORSE
 let horseRoot: AbstractMesh | null = null;
+let horseFacingPivot: TransformNode | null = null;
 let horseAnimations: AnimationGroup[] = [];
 let horseIdleAnimation: AnimationGroup | null = null;
 let horseWalkAnimation: AnimationGroup | null = null;
 let activeHorseAnimation: AnimationGroup | null = null;
+
+const HORSE_FACING_OFFSET = Math.PI;
 
 const setHorseAnimation = (next: AnimationGroup | null) => {
   if (!next || activeHorseAnimation === next) return;
@@ -1712,15 +1706,29 @@ const chooseHorseDestination = () => {
     }
   }
 
-  // Try again later if trees or buildings temporarily block the route.
   horseRestUntil = performance.now() + 1200;
 };
 
 const updateHorse = (dt: number, now: number) => {
-  if (!horseRoot || scene.isDisposed) return;
+  if (!horseRoot || !horseFacingPivot || scene.isDisposed) return;
+
+  const turnToward = (directionX: number, directionZ: number, speed: number) => {
+    if (Math.hypot(directionX, directionZ) < 0.001) return;
+
+    const desiredYaw =
+      Math.atan2(directionX, directionZ) + HORSE_FACING_OFFSET;
+
+    const yawDifference =
+      ((desiredYaw - horseFacingPivot!.rotation.y + Math.PI * 3) %
+        (Math.PI * 2)) - Math.PI;
+
+    horseFacingPivot!.rotation.y +=
+      yawDifference * Math.min(1, speed * dt);
+  };
 
   if (now < horseRestUntil) {
     setHorseAnimation(horseIdleAnimation);
+    turnToward(horseTargetX - horseX, horseTargetZ - horseZ, 0.12);
     return;
   }
 
@@ -1738,13 +1746,12 @@ const updateHorse = (dt: number, now: number) => {
   setHorseAnimation(horseWalkAnimation);
 
   const step = Math.min(0.045 * dt, distance);
-    const previousHorseX = horseX;
+  const previousHorseX = horseX;
   const previousHorseZ = horseZ;
   const nextX = horseX + (dx / distance) * step;
   const nextZ = horseZ + (dz / distance) * step;
 
   if (!horsePathIsClear(horseX, horseZ, nextX, nextZ)) {
-    // Try a safe angled step before choosing an entirely new route.
     const baseAngle = Math.atan2(dx, dz);
     let moved = false;
 
@@ -1778,22 +1785,17 @@ const updateHorse = (dt: number, now: number) => {
     horseZ = nextZ;
   }
 
-   // Face the direction the horse actually moved this frame.
-  const actualMoveX = horseX - previousHorseX;
-  const actualMoveZ = horseZ - previousHorseZ;
-
-  if (Math.hypot(actualMoveX, actualMoveZ) > 0.0001) {
-const desiredYaw = Math.atan2(actualMoveX, actualMoveZ) + Math.PI;
-const yawDifference =
-  ((desiredYaw - horseRoot.rotation.y + Math.PI * 3) %
-    (Math.PI * 2)) - Math.PI;
-
-horseRoot.rotation.y += yawDifference * Math.min(1, 0.3 * dt);  }
+  turnToward(
+    horseX - previousHorseX,
+    horseZ - previousHorseZ,
+    0.3
+  );
 
   horseRoot.position.x = horseX;
   horseRoot.position.z = horseZ;
 };
 
+// LOAD THE HORSE
 void (async () => {
   try {
     const imported = await SceneLoader.ImportMeshAsync(
@@ -1809,35 +1811,42 @@ void (async () => {
       return;
     }
 
-    const root = (
+    const modelRoot = (
       imported.meshes.find((mesh) => mesh.name === "__root__") ??
       imported.meshes.find((mesh) => !mesh.parent) ??
       imported.meshes[0]
     );
 
-    if (!root) {
+    if (!modelRoot) {
       throw new Error("The horse model contains no meshes.");
     }
 
-    horseRoot = root;
-    horseRoot.name = "FreeRoamingHorse";
-
-    const bounds = horseRoot.getHierarchyBoundingVectors(true);
+    const bounds = modelRoot.getHierarchyBoundingVectors(true);
     const height = bounds.max.y - bounds.min.y;
 
     if (height > 0) {
-      horseRoot.scaling.scaleInPlace(4.025 / height);
+      modelRoot.scaling.scaleInPlace(4.025 / height);
     }
 
-    const groundBounds = horseRoot.getHierarchyBoundingVectors(true);
-    horseRoot.position.y -= groundBounds.min.y;
+    const groundBounds = modelRoot.getHierarchyBoundingVectors(true);
+    modelRoot.position.y -= groundBounds.min.y;
 
+    // Parent pivot controls heading; GLB keeps its own animation orientation.
+    const pivot = new TransformNode("HorseFacingPivot", scene);
+    pivot.position.set(42, 0, 12);
+    pivot.rotation.y = Math.PI;
+
+    modelRoot.parent = pivot;
+    modelRoot.position.x = 0;
+    modelRoot.position.z = 0;
+    modelRoot.rotation.y = 0;
+
+    horseFacingPivot = pivot;
+    horseRoot = modelRoot;
     horseX = 42;
     horseZ = 12;
-    horseRoot.position.x = horseX;
-    horseRoot.position.z = horseZ;
-horseRoot.rotation.y = Math.PI;
-    horseRoot.getChildMeshes(false).forEach((mesh) => {
+
+    modelRoot.getChildMeshes(false).forEach((mesh) => {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
 
@@ -1862,12 +1871,13 @@ horseRoot.rotation.y = Math.PI;
       available: horseAnimations.map((group) => group.name),
     });
 
-    horseRoot.setEnabled(true);
+    modelRoot.setEnabled(true);
     chooseHorseDestination();
   } catch (error) {
     console.error("Failed to load the roaming horse:", error);
   }
 })();
+
 
     // Ground-detail pass starts immediately below this line.
 
