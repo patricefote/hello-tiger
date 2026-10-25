@@ -1661,7 +1661,8 @@ let horseIdleAnimation: AnimationGroup | null = null;
 let horseWalkAnimation: AnimationGroup | null = null;
 let activeHorseAnimation: AnimationGroup | null = null;
 
-const HORSE_FACING_OFFSET = Math.PI;
+// The pivot handles heading; the model faces forward in its local space.
+const HORSE_FACING_OFFSET = 0;
 
 const setHorseAnimation = (next: AnimationGroup | null) => {
   if (!next || activeHorseAnimation === next) return;
@@ -1712,7 +1713,11 @@ const chooseHorseDestination = () => {
 const updateHorse = (dt: number, now: number) => {
   if (!horseRoot || !horseFacingPivot || scene.isDisposed) return;
 
-  const turnToward = (directionX: number, directionZ: number, speed: number) => {
+  const turnToward = (
+    directionX: number,
+    directionZ: number,
+    speed: number
+  ) => {
     if (Math.hypot(directionX, directionZ) < 0.001) return;
 
     const desiredYaw =
@@ -1791,8 +1796,8 @@ const updateHorse = (dt: number, now: number) => {
     0.3
   );
 
-  horseRoot.position.x = horseX;
-  horseRoot.position.z = horseZ;
+  horseFacingPivot.position.x = horseX;
+  horseFacingPivot.position.z = horseZ;
 };
 
 // LOAD THE HORSE
@@ -1831,10 +1836,10 @@ void (async () => {
     const groundBounds = modelRoot.getHierarchyBoundingVectors(true);
     modelRoot.position.y -= groundBounds.min.y;
 
-    // Parent pivot controls heading; GLB keeps its own animation orientation.
+    // The pivot controls world movement and heading.
     const pivot = new TransformNode("HorseFacingPivot", scene);
     pivot.position.set(42, 0, 12);
-    pivot.rotation.y = Math.PI;
+    pivot.rotation.y = 0;
 
     modelRoot.parent = pivot;
     modelRoot.position.x = 0;
@@ -1877,8 +1882,6 @@ void (async () => {
     console.error("Failed to load the roaming horse:", error);
   }
 })();
-
-
     // Ground-detail pass starts immediately below this line.
 
     // Ground-detail pass: small, low-profile decorations make the yard feel
