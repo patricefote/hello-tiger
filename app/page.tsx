@@ -1536,51 +1536,51 @@ console.log("Extra trees:", extraTreePositions.length);
 const horseTreeClearance = 2.8;
 
 // Place the imported trees once the forest templates are ready.
-    void (async () => {
-      while (importedTreeTemplates.length === 0) {
-        await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => resolve())
-        );
-      }
+void (async () => {
+  while (importedTreeTemplates.length === 0) {
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve())
+    );
+  }
 
-      const positions: [number, number][] = [
-        ...treePositions,
-        ...extraTreePositions,
-      ];
+  const positions: [number, number][] = [
+    ...treePositions,
+    ...extraTreePositions,
+  ];
 
-      positions.forEach(([x, z], index) => {
-        const template =
-          importedTreeTemplates[index % importedTreeTemplates.length];
+  positions.forEach(([x, z], index) => {
+    const template =
+      importedTreeTemplates[index % importedTreeTemplates.length];
 
-        const clone = template.clone(`placedTree_${index}`, null, false);
+    const clone = template.clone(`placedTree_${index}`, null, false);
 
-        if (!clone) {
-          console.error("TREE CLONE FAILED", { index });
-          return;
-        }
+    if (!clone) {
+      console.error("TREE CLONE FAILED", { index });
+      return;
+    }
 
-        clone.parent = null;
-        clone.position.set(x, 0, z);
-        clone.rotation.set(0, Math.random() * Math.PI * 2, 0);
-        clone.scaling.setAll(1);
-        clone.setEnabled(true);
+    clone.parent = null;
+    clone.position.set(x, 0, z);
+    clone.rotation.set(0, Math.random() * Math.PI * 2, 0);
+    clone.scaling.setAll(1);
+    clone.setEnabled(true);
 
-        clone.getChildMeshes(false).forEach((mesh) => {
-          mesh.setEnabled(true);
-          mesh.isVisible = true;
-          mesh.isPickable = true;
-          mesh.receiveShadows = true;
-          shadowGenerator.addShadowCaster(mesh);
-        });
+    clone.getChildMeshes(false).forEach((mesh) => {
+      mesh.setEnabled(true);
+      mesh.isVisible = true;
+      mesh.isPickable = true;
+      mesh.receiveShadows = true;
+      shadowGenerator.addShadowCaster(mesh);
+    });
 
-        clone.computeWorldMatrix(true);
-      });
+    clone.computeWorldMatrix(true);
+  });
 
-      console.log("IMPORTED TREES PLACED", {
-        requested: positions.length,
-        templates: importedTreeTemplates.length,
-      });
-    })();
+  console.log("IMPORTED TREES PLACED", {
+    requested: positions.length,
+    templates: importedTreeTemplates.length,
+  });
+})();
 
 const horsePathIsClear = (
   fromX: number,
@@ -1596,6 +1596,19 @@ const horsePathIsClear = (
   const allTrees: [number, number][] = [
     ...treePositions,
     ...extraTreePositions,
+  ];
+
+  const fixedHorseObstacles: {
+    x: number;
+    z: number;
+    radius: number;
+  }[] = [
+    { x: -0.6, z: 8, radius: 7 },    // Starter hut
+    { x: 94, z: -12, radius: 10 },   // Medieval house
+    { x: 65, z: 35, radius: 10 },    // Fantasy house
+    { x: 20, z: -135, radius: 12 },  // Treehouse
+    { x: -15, z: 19, radius: 5 },    // Decorative barn
+    { x: -34, z: 19, radius: 5 },    // Decorative barn
   ];
 
   for (let i = 1; i <= samples; i++) {
@@ -1628,28 +1641,15 @@ const horsePathIsClear = (
       }
     }
 
-   // Avoid fixed scenery.
-const fixedHorseObstacles: {
-  x: number;
-  z: number;
-  radius: number;
-}[] = [
-  { x: -0.6, z: 8, radius: 7 },    // Starter hut
-  { x: 94, z: -12, radius: 10 },   // Medieval house
-  { x: 65, z: 35, radius: 10 },    // Fantasy house
-  { x: 20, z: -135, radius: 12 },  // Treehouse
-  { x: -15, z: 19, radius: 5 },    // Decorative barn
-  { x: -34, z: 19, radius: 5 },    // Decorative barn
-];
-
-for (const obstacle of fixedHorseObstacles) {
-  if (
-    Math.hypot(x - obstacle.x, z - obstacle.z) <
-    obstacle.radius
-  ) {
-    return false;
-  }
-}
+    // Avoid fixed scenery.
+    for (const obstacle of fixedHorseObstacles) {
+      if (
+        Math.hypot(x - obstacle.x, z - obstacle.z) <
+        obstacle.radius
+      ) {
+        return false;
+      }
+    }
 
     // Avoid player-built barns.
     for (const barn of barns) {
@@ -1661,185 +1661,214 @@ for (const obstacle of fixedHorseObstacles) {
 
   return true;
 };
-    // FREE-ROAMING WORLD HORSE
-    let horseRoot: AbstractMesh | null = null;
-    let horseAnimations: AnimationGroup[] = [];
-    let horseX = 42;
-    let horseZ = 12;
-    let horseTargetX = 42;
-    let horseTargetZ = 12;
-    let horseRestUntil = 0;
-    let horseLastTurn = 1;
 
-    const horseBounds = {
-      minX: -220,
-      maxX: 420,
-      minZ: -170,
-      maxZ: 160,
-    };
+// FREE-ROAMING WORLD HORSE
+let horseRoot: AbstractMesh | null = null;
+let horseAnimations: AnimationGroup[] = [];
+let horseIdleAnimation: AnimationGroup | null = null;
+let horseWalkAnimation: AnimationGroup | null = null;
+let activeHorseAnimation: AnimationGroup | null = null;
 
-    const chooseHorseDestination = () => {
-      if (!horseRoot || scene.isDisposed) return;
+const setHorseAnimation = (next: AnimationGroup | null) => {
+  if (!next || activeHorseAnimation === next) return;
 
-      for (let attempt = 0; attempt < 24; attempt++) {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 12 + Math.random() * 38;
-        const x = horseX + Math.cos(angle) * distance;
-        const z = horseZ + Math.sin(angle) * distance;
+  activeHorseAnimation?.stop();
+  activeHorseAnimation = next;
+  next.start(true);
+};
 
-        if (
-          x < horseBounds.minX || x > horseBounds.maxX ||
-          z < horseBounds.minZ || z > horseBounds.maxZ
-        ) continue;
+let horseX = 42;
+let horseZ = 12;
+let horseTargetX = 42;
+let horseTargetZ = 12;
+let horseRestUntil = 0;
+let horseLastTurn = 1;
 
-        if (horsePathIsClear(horseX, horseZ, x, z)) {
-          horseTargetX = x;
-          horseTargetZ = z;
-          return;
-        }
+const horseBounds = {
+  minX: -220,
+  maxX: 420,
+  minZ: -170,
+  maxZ: 160,
+};
+
+const chooseHorseDestination = () => {
+  if (!horseRoot || scene.isDisposed) return;
+
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 12 + Math.random() * 38;
+    const x = horseX + Math.cos(angle) * distance;
+    const z = horseZ + Math.sin(angle) * distance;
+
+    if (
+      x < horseBounds.minX || x > horseBounds.maxX ||
+      z < horseBounds.minZ || z > horseBounds.maxZ
+    ) continue;
+
+    if (horsePathIsClear(horseX, horseZ, x, z)) {
+      horseTargetX = x;
+      horseTargetZ = z;
+      return;
+    }
+  }
+
+  // Try again later if trees or buildings temporarily block the route.
+  horseRestUntil = performance.now() + 1200;
+};
+
+const updateHorse = (dt: number, now: number) => {
+  if (!horseRoot || scene.isDisposed) return;
+
+  if (now < horseRestUntil) {
+    setHorseAnimation(horseIdleAnimation);
+    return;
+  }
+
+  const dx = horseTargetX - horseX;
+  const dz = horseTargetZ - horseZ;
+  const distance = Math.hypot(dx, dz);
+
+  if (distance < 1.5) {
+    setHorseAnimation(horseIdleAnimation);
+    horseRestUntil = now + 700 + Math.random() * 1800;
+    chooseHorseDestination();
+    return;
+  }
+
+  setHorseAnimation(horseWalkAnimation);
+
+  const step = Math.min(0.045 * dt, distance);
+    const previousHorseX = horseX;
+  const previousHorseZ = horseZ;
+  const nextX = horseX + (dx / distance) * step;
+  const nextZ = horseZ + (dz / distance) * step;
+
+  if (!horsePathIsClear(horseX, horseZ, nextX, nextZ)) {
+    // Try a safe angled step before choosing an entirely new route.
+    const baseAngle = Math.atan2(dx, dz);
+    let moved = false;
+
+    for (const offset of [
+      horseLastTurn * 0.65,
+      -horseLastTurn * 0.65,
+      horseLastTurn * 1.2,
+      -horseLastTurn * 1.2,
+    ]) {
+      const angle = baseAngle + offset;
+      const sidestepX = horseX + Math.sin(angle) * step;
+      const sidestepZ = horseZ + Math.cos(angle) * step;
+
+      if (horsePathIsClear(horseX, horseZ, sidestepX, sidestepZ)) {
+        horseX = sidestepX;
+        horseZ = sidestepZ;
+        horseLastTurn *= -1;
+        moved = true;
+        break;
       }
+    }
 
-      // Try again later if trees or buildings temporarily block the route.
-      horseRestUntil = performance.now() + 1200;
-    };
+    if (!moved) {
+      setHorseAnimation(horseIdleAnimation);
+      horseRestUntil = now + 250;
+      chooseHorseDestination();
+      return;
+    }
+  } else {
+    horseX = nextX;
+    horseZ = nextZ;
+  }
 
-    const updateHorse = (dt: number, now: number) => {
-      if (!horseRoot || scene.isDisposed) return;
+   // Face the direction the horse actually moved this frame.
+  const actualMoveX = horseX - previousHorseX;
+  const actualMoveZ = horseZ - previousHorseZ;
 
-      if (now < horseRestUntil) return;
+  if (Math.hypot(actualMoveX, actualMoveZ) > 0.0001) {
+const desiredYaw = Math.atan2(actualMoveX, actualMoveZ) + Math.PI;
+const yawDifference =
+  ((desiredYaw - horseRoot.rotation.y + Math.PI * 3) %
+    (Math.PI * 2)) - Math.PI;
 
-      const dx = horseTargetX - horseX;
-      const dz = horseTargetZ - horseZ;
-      const distance = Math.hypot(dx, dz);
+horseRoot.rotation.y += yawDifference * Math.min(1, 0.3 * dt);  }
 
-      if (distance < 1.5) {
-        horseRestUntil = now + 700 + Math.random() * 1800;
-        chooseHorseDestination();
-        return;
+  horseRoot.position.x = horseX;
+  horseRoot.position.z = horseZ;
+};
+
+void (async () => {
+  try {
+    const imported = await SceneLoader.ImportMeshAsync(
+      "",
+      "/models/",
+      "horse_-_realistic_3d_model_demo_free.glb",
+      scene
+    );
+
+    if (scene.isDisposed) {
+      imported.animationGroups.forEach((group) => group.dispose());
+      imported.meshes.forEach((mesh) => mesh.dispose());
+      return;
+    }
+
+    const root = (
+      imported.meshes.find((mesh) => mesh.name === "__root__") ??
+      imported.meshes.find((mesh) => !mesh.parent) ??
+      imported.meshes[0]
+    );
+
+    if (!root) {
+      throw new Error("The horse model contains no meshes.");
+    }
+
+    horseRoot = root;
+    horseRoot.name = "FreeRoamingHorse";
+
+    const bounds = horseRoot.getHierarchyBoundingVectors(true);
+    const height = bounds.max.y - bounds.min.y;
+
+    if (height > 0) {
+      horseRoot.scaling.scaleInPlace(4.025 / height);
+    }
+
+    const groundBounds = horseRoot.getHierarchyBoundingVectors(true);
+    horseRoot.position.y -= groundBounds.min.y;
+
+    horseX = 42;
+    horseZ = 12;
+    horseRoot.position.x = horseX;
+    horseRoot.position.z = horseZ;
+horseRoot.rotation.y = Math.PI;
+    horseRoot.getChildMeshes(false).forEach((mesh) => {
+      mesh.isPickable = false;
+      mesh.receiveShadows = true;
+
+      if (shadowGenerator) {
+        shadowGenerator.addShadowCaster(mesh);
       }
+    });
 
-      const step = Math.min(0.045 * dt, distance);
-      const nextX = horseX + (dx / distance) * step;
-      const nextZ = horseZ + (dz / distance) * step;
+    horseAnimations = imported.animationGroups;
 
-      if (!horsePathIsClear(horseX, horseZ, nextX, nextZ)) {
-        // Try a safe angled step before choosing an entirely new route.
-        const baseAngle = Math.atan2(dx, dz);
-        let moved = false;
+    horseIdleAnimation =
+      horseAnimations.find((group) => /idle/i.test(group.name)) ?? null;
 
-        for (const offset of [
-          horseLastTurn * 0.65,
-          -horseLastTurn * 0.65,
-          horseLastTurn * 1.2,
-          -horseLastTurn * 1.2,
-        ]) {
-          const angle = baseAngle + offset;
-          const sidestepX = horseX + Math.sin(angle) * step;
-          const sidestepZ = horseZ + Math.cos(angle) * step;
+    horseWalkAnimation =
+      horseAnimations.find((group) => /walk/i.test(group.name)) ?? null;
 
-          if (horsePathIsClear(horseX, horseZ, sidestepX, sidestepZ)) {
-            horseX = sidestepX;
-            horseZ = sidestepZ;
-            horseLastTurn *= -1;
-            moved = true;
-            break;
-          }
-        }
+    setHorseAnimation(horseIdleAnimation ?? horseAnimations[0] ?? null);
 
-        if (!moved) {
-          horseRestUntil = now + 250;
-          chooseHorseDestination();
-          return;
-        }
-      } else {
-        horseX = nextX;
-        horseZ = nextZ;
-      }
+    console.log("HORSE ANIMATIONS", {
+      idle: horseIdleAnimation?.name,
+      walk: horseWalkAnimation?.name,
+      available: horseAnimations.map((group) => group.name),
+    });
 
-      const desiredYaw = Math.atan2(dx, dz);
-      let yawDifference =
-        ((desiredYaw - horseRoot.rotation.y + Math.PI * 3) %
-          (Math.PI * 2)) - Math.PI;
+    horseRoot.setEnabled(true);
+    chooseHorseDestination();
+  } catch (error) {
+    console.error("Failed to load the roaming horse:", error);
+  }
+})();
 
-      horseRoot.rotation.y += yawDifference * Math.min(1, 0.12 * dt);
-      horseRoot.position.x = horseX;
-      horseRoot.position.z = horseZ;
-    };
-
-    void (async () => {
-      try {
-        const imported = await SceneLoader.ImportMeshAsync(
-          "",
-          "/models/",
-          "horse_-_realistic_3d_model_demo_free.glb",
-          scene
-        );
-
-        if (scene.isDisposed) {
-          imported.animationGroups.forEach((group) => group.dispose());
-          imported.meshes.forEach((mesh) => mesh.dispose());
-          return;
-        }
-
-        const root = (
-          imported.meshes.find((mesh) => mesh.name === "__root__") ??
-          imported.meshes.find((mesh) => !mesh.parent) ??
-          imported.meshes[0]
-        );
-
-        if (!root) {
-          throw new Error("The horse model contains no meshes.");
-        }
-
-        horseRoot = root;
-        horseRoot.name = "FreeRoamingHorse";
-
-        const bounds = horseRoot.getHierarchyBoundingVectors(true);
-        const height = bounds.max.y - bounds.min.y;
-
-        if (height > 0) {
-          horseRoot.scaling.scaleInPlace(4.025 / height);
-        }
-
-        const groundBounds = horseRoot.getHierarchyBoundingVectors(true);
-        horseRoot.position.y -= groundBounds.min.y;
-
-        horseX = 42;
-        horseZ = 12;
-        horseRoot.position.x = horseX;
-        horseRoot.position.z = horseZ;
-        horseRoot.rotation.y = 0;
-
-        horseRoot.getChildMeshes(false).forEach((mesh) => {
-          mesh.isPickable = false;
-          mesh.receiveShadows = true;
-
-          if (shadowGenerator) {
-            shadowGenerator.addShadowCaster(mesh);
-          }
-        });
-
-        horseAnimations = imported.animationGroups;
-
-        if (horseAnimations.length > 0) {
-          horseAnimations[0].start(true);
-        }
-
-        horseRoot.setEnabled(true);
-        chooseHorseDestination();
-
-        console.log("FREE-ROAMING HORSE LOADED", {
-          meshes: imported.meshes.length,
-          animations: horseAnimations.length,
-          start: { x: horseX, z: horseZ },
-        });
-      } catch (error) {
-        console.error(
-          "Could not load the horse. Check the GLB file in public/models:",
-          error
-        );
-      }
-    })();
     // Ground-detail pass starts immediately below this line.
 
     // Ground-detail pass: small, low-profile decorations make the yard feel
