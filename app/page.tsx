@@ -1,8 +1,5 @@
 ﻿"use client";
 
-let rusticTimberMat: Material | null = null;
-let weatheredPlanksMat: Material | null = null;
-
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
 import {
@@ -29,6 +26,9 @@ import {
   VertexBuffer,
   VertexData,
 } from "@babylonjs/core";
+
+let rusticTimberMat: Material | null = null;
+let weatheredPlanksMat: Material | null = null;
 
 type Cat = {
   name: string;
@@ -2954,9 +2954,9 @@ tigerModelAnimations.forEach((group) => group.stop());
       housed: false,
       barnIndex: null,
     });
-  };
-   
-
+  }; 
+ 
+ 
   // CREATE THE THREE CATS
   createCat("Mittens", -4, -3, whiteMat);
   createCat("Pumpkin", 5, -5, orangeMat);
@@ -2964,10 +2964,12 @@ tigerModelAnimations.forEach((group) => group.stop());
 
   // LOAD CUSTOM MODELS FOR ALL THREE CATS
   void (async () => {
+    type CatAnimation = (typeof cats)[number]["animationGroups"][number];
+
     type CatAnimationState = {
-      idle?: (typeof cats)[number]["animationGroups"][number];
-      movement?: (typeof cats)[number]["animationGroups"][number];
-      active?: (typeof cats)[number]["animationGroups"][number];
+      idle?: CatAnimation;
+      movement?: CatAnimation;
+      active?: CatAnimation;
       lastX: number;
       lastZ: number;
       moving: boolean;
@@ -2985,7 +2987,7 @@ tigerModelAnimations.forEach((group) => group.stop());
       },
       {
         name: "Pumpkin",
-        file: "an_animated_cat.glb",
+        file: "stripe_the_cat_rigged_and_animated.glb",
         rootName: "PumpkinModelRoot",
         targetHeight: 1.1,
         extraLift: 0,
@@ -3015,10 +3017,9 @@ tigerModelAnimations.forEach((group) => group.stop());
 
         visualRoot = new TransformNode(config.rootName, scene);
 
-        // Parent the imported model's top-level meshes to one root.
         imported.meshes.forEach((mesh) => {
           if (mesh.parent === null) {
-            mesh.parent = visualRoot;
+            mesh.parent = visualRoot!;
           }
         });
 
@@ -3027,7 +3028,6 @@ tigerModelAnimations.forEach((group) => group.stop());
         visualRoot.scaling.setAll(1);
         visualRoot.computeWorldMatrix(true);
 
-        // Measure the imported hierarchy before scaling.
         let bounds = visualRoot.getHierarchyBoundingVectors(true);
         const originalHeight = bounds.max.y - bounds.min.y;
 
@@ -3040,12 +3040,9 @@ tigerModelAnimations.forEach((group) => group.stop());
           );
         }
 
-        // Normalize model height.
-        const scaleFactor = config.targetHeight / originalHeight;
-        visualRoot.scaling.setAll(scaleFactor);
+        visualRoot.scaling.setAll(config.targetHeight / originalHeight);
         visualRoot.computeWorldMatrix(true);
 
-        // Align model geometry with the ground.
         bounds = visualRoot.getHierarchyBoundingVectors(true);
         visualRoot.position.y -= bounds.min.y;
         visualRoot.computeWorldMatrix(true);
@@ -3055,7 +3052,6 @@ tigerModelAnimations.forEach((group) => group.stop());
           visualRoot.computeWorldMatrix(true);
         }
 
-        // Configure imported meshes and shadows.
         imported.meshes.forEach((mesh) => {
           mesh.isPickable = false;
 
@@ -3065,32 +3061,53 @@ tigerModelAnimations.forEach((group) => group.stop());
           }
         });
 
-        // Connect model to the existing cat system.
         cat.modelRoot = visualRoot;
         cat.animationGroups = imported.animationGroups;
 
         const groups = imported.animationGroups;
 
-        // Pumpkin's Take 001 is her confirmed idle animation.
-        const idle =
-          groups.find((group) =>
+        let idle: CatAnimation | undefined;
+        let movement: CatAnimation | undefined;
+
+        if (config.name === "Pumpkin") {
+          // Stripe's native rig and combined animation.
+          // Keep the original tracks intact for this test.
+          const nativeAnimation =
+            groups.find((group) =>
+              /all animations/i.test(group.name)
+            ) ?? groups[0];
+
+          if (nativeAnimation) {
+            movement = nativeAnimation;
+
+            console.info("PUMPKIN STRIPE ANIMATION", {
+              file: config.file,
+              clip: nativeAnimation.name,
+              from: nativeAnimation.from,
+              to: nativeAnimation.to,
+              durationFrames:
+                nativeAnimation.to - nativeAnimation.from,
+              animatedTracks:
+                nativeAnimation.targetedAnimations.length,
+            });
+          } else {
+            console.warn("No native animation found for Pumpkin.");
+          }
+        } else {
+          // Preserve existing animation selection for the other cats.
+          idle = groups.find((group) =>
             /idle|stand|breath/i.test(group.name)
-          ) ??
-          (config.name === "Pumpkin"
-            ? groups.find((group) => group.name === "Take 001") ??
-              groups[0]
-            : undefined);
+          );
 
-        // Only use an explicitly named locomotion clip for movement.
-        const movement = groups.find((group) =>
-          /walk|run|move|locomotion/i.test(group.name)
-        );
+          movement = groups.find((group) =>
+            /walk|run|move|locomotion/i.test(group.name)
+          );
 
-        // Start the initial idle clip without repeatedly restarting it.
-        if (idle) {
-          idle.start(true);
-          idle.enableBlending = true;
-          idle.blendingSpeed = 0.08;
+          if (idle) {
+            idle.enableBlending = true;
+            idle.blendingSpeed = 0.08;
+            idle.start(true);
+          }
         }
 
         animationStates.set(config.name, {
@@ -3102,7 +3119,7 @@ tigerModelAnimations.forEach((group) => group.stop());
           moving: false,
         });
 
-        // Hide procedural parts only after the replacement loads.
+        // Hide procedural models only after the custom model loads.
         cat.parts.forEach((part) => {
           part.setEnabled(false);
           shadowGenerator.removeShadowCaster(part);
@@ -3113,7 +3130,7 @@ tigerModelAnimations.forEach((group) => group.stop());
 
         console.info(`${config.name} loaded:`, {
           file: config.file,
-          idle: idle?.name ?? "none",
+          idle: idle?.name ?? "static/rest pose",
           movement: movement?.name ?? "none",
           animationCount: groups.length,
           lowestPointY: bounds.min.y,
@@ -3130,8 +3147,7 @@ tigerModelAnimations.forEach((group) => group.stop());
       }
     }
 
-    // Switch animation only when a cat changes between moving and stopped.
-    // The existing cat AI remains responsible for movement and target selection.
+    // Animation switching only; preserve cat AI and tree targeting.
     scene.onBeforeRenderObservable.add(() => {
       for (const cat of cats) {
         const state = animationStates.get(cat.name);
@@ -3144,22 +3160,37 @@ tigerModelAnimations.forEach((group) => group.stop());
         state.lastX = cat.x;
         state.lastZ = cat.z;
 
-        // Ignore tiny coordinate fluctuations.
         const movingNow = distanceMoved > 0.001;
-
         if (movingNow === state.moving) continue;
 
         state.moving = movingNow;
 
         const nextAnimation = movingNow
           ? state.movement ?? state.idle
-          : state.idle ?? state.movement;
+          : state.idle;
 
-        if (!nextAnimation || nextAnimation === state.active) continue;
+        if (nextAnimation === state.active) continue;
 
-        // Fade the previous clip out and the new clip in.
-        if (state.active) {
-          state.active.stop();
+        const previousAnimation = state.active;
+
+        if (previousAnimation) {
+          previousAnimation.stop();
+
+          // No separate idle clip exists for Stripe yet.
+          // Reset to the first pose when Pumpkin stops moving.
+          if (
+            cat.name === "Pumpkin" &&
+            previousAnimation === state.movement
+          ) {
+            previousAnimation.goToFrame(previousAnimation.from);
+          }
+        }
+
+        state.active = undefined;
+
+        if (!nextAnimation) {
+          console.debug(`${cat.name}: stopped in idle/rest pose`);
+          continue;
         }
 
         nextAnimation.enableBlending = true;
