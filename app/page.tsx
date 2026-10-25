@@ -6,6 +6,7 @@ let weatheredPlanksMat: Material | null = null;
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
 import {
+  AbstractMesh,
   AnimationGroup,
   ArcRotateCamera,
   Color3,
@@ -1467,71 +1468,74 @@ void (async () => {
       }
     })();
 
-    // Shared wind animation registry for foliage and ground plants.
-    const windSwayMeshes: {
-      mesh: Mesh;
-      baseRotationX: number;
-      baseRotationZ: number;
-      basePositionX: number;
-      basePositionY: number;
-      basePositionZ: number;
-      phase: number;
-      amplitude: number;
-      positionAmplitude: number;
-      speed: number;
-    }[] = [];
+// Shared wind animation registry for foliage and ground plants.
+const windSwayMeshes: {
+  mesh: Mesh;
+  baseRotationX: number;
+  baseRotationZ: number;
+  basePositionX: number;
+  basePositionY: number;
+  basePositionZ: number;
+  phase: number;
+  amplitude: number;
+  positionAmplitude: number;
+  speed: number;
+}[] = [];
 
-    const extraTreePositions: [number, number][] = [
-      [-105, -115], [-75, -95], [-120, -55],
-      [-95, -10], [-115, 35], [-80, 75],
-      [-45, 100], [-5, 115], [35, 105],
-      [80, 115], [125, 105], [175, 115],
-      [215, 90], [220, 45], [225, 5],
-      [35, -100], [75, -125], [115, -105],
-      [150, -125], [185, -100], [220, -120],
-      [-65, -130], [-110, 110], [5, 65],
-    ];
+const extraTreePositions: [number, number][] = [
+  [-105, -115], [-75, -95], [-120, -55],
+  [-95, -10], [-115, 35], [-80, 75],
+  [-45, 100], [-5, 115], [35, 105],
+  [80, 115], [125, 105], [175, 115],
+  [215, 90], [220, 45], [225, 5],
+  [35, -100], [75, -125], [115, -105],
+  [150, -125], [185, -100], [220, -120],
+  [-65, -130], [-110, 110], [5, 65],
+];
 
-    const treePositions: [number, number][] = [
-      // Home area
-      [-28, -7],
+const treePositions: [number, number][] = [
+  // Home area
+  [-28, -7],
 
-      // Western woodland
-      [2, -17], [23, -1], [19, 3], [-13, 37],
+  // Western woodland
+  [2, -17], [23, -1], [19, 3], [-13, 37],
 
-      // Northern woodland
-      [-19, 25], [10, -2], [13, -3],
+  // Northern woodland
+  [-19, 25], [10, -2], [13, -3],
 
-      // Eastern woodland
-      [7, -13], [4, -3], [-5, 28], [3, 41],
+  // Eastern woodland
+  [7, -13], [4, -3], [-5, 28], [3, 41],
 
-      // Southern woodland
-      [-3, 34], [-4, 29],
+  // Southern woodland
+  [-3, 34], [-4, 29],
 
-      // Scattered interior trees
-      [-29, 12], [-7, 14],
+  // Scattered interior trees
+  [-29, 12], [-7, 14],
 
-      // Japanese exploration area
-      [-42, -48], [-30, -55], [2, -57],
-      [-38, -78], [-20, -112], [38, -65],
+  // Japanese exploration area
+  [-42, -48], [-30, -55], [2, -57],
+  [-38, -78], [-20, -112], [38, -65],
 
-      // Connecting woodland
-      [65, -42], [105, -65], [120, -48],
-      [175, -35], [200, -48],
+  // Connecting woodland
+  [65, -42], [105, -65], [120, -48],
+  [175, -35], [200, -48],
 
-      // Mountain approach
-      [210, -90], [290, -95], [330, -75],
-      [370, -65], [390, -30],
+  // Mountain approach
+  [210, -90], [290, -95], [330, -75],
+  [370, -65], [390, -30],
 
-      // Southern woodland
-      [75, 65], [100, 80], [125, 60],
-      [245, 85], [265, 115],
-    ];
+  // Southern woodland
+  [75, 65], [100, 80], [125, 60],
+  [245, 85], [265, 115],
+];
 
-    console.log("Original trees:", treePositions.length);
-    console.log("Extra trees:", extraTreePositions.length);
+console.log("Original trees:", treePositions.length);
+console.log("Extra trees:", extraTreePositions.length);
 
-    // Place the imported trees once the forest templates are ready.
+// Horse clearance from tree trunks.
+const horseTreeClearance = 2.8;
+
+// Place the imported trees once the forest templates are ready.
     void (async () => {
       while (importedTreeTemplates.length === 0) {
         await new Promise<void>((resolve) =>
@@ -1578,6 +1582,264 @@ void (async () => {
       });
     })();
 
+const horsePathIsClear = (
+  fromX: number,
+  fromZ: number,
+  toX: number,
+  toZ: number
+): boolean => {
+  const distance = Math.hypot(toX - fromX, toZ - fromZ);
+  const samples = Math.max(2, Math.ceil(distance / 0.8));
+  const moveX = toX - fromX;
+  const moveZ = toZ - fromZ;
+
+  const allTrees: [number, number][] = [
+    ...treePositions,
+    ...extraTreePositions,
+  ];
+
+  for (let i = 1; i <= samples; i++) {
+    const t = i / samples;
+    const x = fromX + moveX * t;
+    const z = fromZ + moveZ * t;
+
+    // Avoid trees, while allowing the horse to escape
+    // if it starts inside a tree's clearance radius.
+    for (const [treeX, treeZ] of allTrees) {
+      const startDistance = Math.hypot(
+        fromX - treeX,
+        fromZ - treeZ
+      );
+
+      const sampleDistance = Math.hypot(
+        x - treeX,
+        z - treeZ
+      );
+
+      if (sampleDistance < horseTreeClearance) {
+        const movingAway =
+          startDistance < horseTreeClearance &&
+          sampleDistance > startDistance &&
+          (x - treeX) * moveX + (z - treeZ) * moveZ > 0;
+
+        if (!movingAway) {
+          return false;
+        }
+      }
+    }
+
+   // Avoid fixed scenery.
+const fixedHorseObstacles: {
+  x: number;
+  z: number;
+  radius: number;
+}[] = [
+  { x: -0.6, z: 8, radius: 7 },    // Starter hut
+  { x: 94, z: -12, radius: 10 },   // Medieval house
+  { x: 65, z: 35, radius: 10 },    // Fantasy house
+  { x: 20, z: -135, radius: 12 },  // Treehouse
+  { x: -15, z: 19, radius: 5 },    // Decorative barn
+  { x: -34, z: 19, radius: 5 },    // Decorative barn
+];
+
+for (const obstacle of fixedHorseObstacles) {
+  if (
+    Math.hypot(x - obstacle.x, z - obstacle.z) <
+    obstacle.radius
+  ) {
+    return false;
+  }
+}
+
+    // Avoid player-built barns.
+    for (const barn of barns) {
+      if (Math.hypot(x - barn.x, z - barn.z) < 5.2) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
+    // FREE-ROAMING WORLD HORSE
+    let horseRoot: AbstractMesh | null = null;
+    let horseAnimations: AnimationGroup[] = [];
+    let horseX = 42;
+    let horseZ = 12;
+    let horseTargetX = 42;
+    let horseTargetZ = 12;
+    let horseRestUntil = 0;
+    let horseLastTurn = 1;
+
+    const horseBounds = {
+      minX: -220,
+      maxX: 420,
+      minZ: -170,
+      maxZ: 160,
+    };
+
+    const chooseHorseDestination = () => {
+      if (!horseRoot || scene.isDisposed) return;
+
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 12 + Math.random() * 38;
+        const x = horseX + Math.cos(angle) * distance;
+        const z = horseZ + Math.sin(angle) * distance;
+
+        if (
+          x < horseBounds.minX || x > horseBounds.maxX ||
+          z < horseBounds.minZ || z > horseBounds.maxZ
+        ) continue;
+
+        if (horsePathIsClear(horseX, horseZ, x, z)) {
+          horseTargetX = x;
+          horseTargetZ = z;
+          return;
+        }
+      }
+
+      // Try again later if trees or buildings temporarily block the route.
+      horseRestUntil = performance.now() + 1200;
+    };
+
+    const updateHorse = (dt: number, now: number) => {
+      if (!horseRoot || scene.isDisposed) return;
+
+      if (now < horseRestUntil) return;
+
+      const dx = horseTargetX - horseX;
+      const dz = horseTargetZ - horseZ;
+      const distance = Math.hypot(dx, dz);
+
+      if (distance < 1.5) {
+        horseRestUntil = now + 700 + Math.random() * 1800;
+        chooseHorseDestination();
+        return;
+      }
+
+      const step = Math.min(0.045 * dt, distance);
+      const nextX = horseX + (dx / distance) * step;
+      const nextZ = horseZ + (dz / distance) * step;
+
+      if (!horsePathIsClear(horseX, horseZ, nextX, nextZ)) {
+        // Try a safe angled step before choosing an entirely new route.
+        const baseAngle = Math.atan2(dx, dz);
+        let moved = false;
+
+        for (const offset of [
+          horseLastTurn * 0.65,
+          -horseLastTurn * 0.65,
+          horseLastTurn * 1.2,
+          -horseLastTurn * 1.2,
+        ]) {
+          const angle = baseAngle + offset;
+          const sidestepX = horseX + Math.sin(angle) * step;
+          const sidestepZ = horseZ + Math.cos(angle) * step;
+
+          if (horsePathIsClear(horseX, horseZ, sidestepX, sidestepZ)) {
+            horseX = sidestepX;
+            horseZ = sidestepZ;
+            horseLastTurn *= -1;
+            moved = true;
+            break;
+          }
+        }
+
+        if (!moved) {
+          horseRestUntil = now + 250;
+          chooseHorseDestination();
+          return;
+        }
+      } else {
+        horseX = nextX;
+        horseZ = nextZ;
+      }
+
+      const desiredYaw = Math.atan2(dx, dz);
+      let yawDifference =
+        ((desiredYaw - horseRoot.rotation.y + Math.PI * 3) %
+          (Math.PI * 2)) - Math.PI;
+
+      horseRoot.rotation.y += yawDifference * Math.min(1, 0.12 * dt);
+      horseRoot.position.x = horseX;
+      horseRoot.position.z = horseZ;
+    };
+
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "horse_-_realistic_3d_model_demo_free.glb",
+          scene
+        );
+
+        if (scene.isDisposed) {
+          imported.animationGroups.forEach((group) => group.dispose());
+          imported.meshes.forEach((mesh) => mesh.dispose());
+          return;
+        }
+
+        const root = (
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes.find((mesh) => !mesh.parent) ??
+          imported.meshes[0]
+        );
+
+        if (!root) {
+          throw new Error("The horse model contains no meshes.");
+        }
+
+        horseRoot = root;
+        horseRoot.name = "FreeRoamingHorse";
+
+        const bounds = horseRoot.getHierarchyBoundingVectors(true);
+        const height = bounds.max.y - bounds.min.y;
+
+        if (height > 0) {
+          horseRoot.scaling.scaleInPlace(4.025 / height);
+        }
+
+        const groundBounds = horseRoot.getHierarchyBoundingVectors(true);
+        horseRoot.position.y -= groundBounds.min.y;
+
+        horseX = 42;
+        horseZ = 12;
+        horseRoot.position.x = horseX;
+        horseRoot.position.z = horseZ;
+        horseRoot.rotation.y = 0;
+
+        horseRoot.getChildMeshes(false).forEach((mesh) => {
+          mesh.isPickable = false;
+          mesh.receiveShadows = true;
+
+          if (shadowGenerator) {
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
+
+        horseAnimations = imported.animationGroups;
+
+        if (horseAnimations.length > 0) {
+          horseAnimations[0].start(true);
+        }
+
+        horseRoot.setEnabled(true);
+        chooseHorseDestination();
+
+        console.log("FREE-ROAMING HORSE LOADED", {
+          meshes: imported.meshes.length,
+          animations: horseAnimations.length,
+          start: { x: horseX, z: horseZ },
+        });
+      } catch (error) {
+        console.error(
+          "Could not load the horse. Check the GLB file in public/models:",
+          error
+        );
+      }
+    })();
     // Ground-detail pass starts immediately below this line.
 
     // Ground-detail pass: small, low-profile decorations make the yard feel
@@ -3018,7 +3280,7 @@ tigerModelAnimations.forEach((group) => group.stop());
 
     const projectiles: Projectile[] = [];
 
-    // TIGER'S LIGHTNING MAGIC ⚡
+    // TIGER'S LIGHTNING MAGIC ?
     // Build a jagged lightning bolt from connected emissive segments.
     const createLightningBolt = (
       name: string,
@@ -3231,6 +3493,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     const roadTiles: RoadTile[] = [];
     const waterTiles: WaterTile[] = [];
     const barns: Barn[] = [];
+    
     let roadPreview: Mesh[] = [];
     let waterPreview: Mesh[] = [];
     let roadX = 0;
@@ -3677,7 +3940,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     catsHousedCount += 1;
     setCatsHoused(catsHousedCount);
     setMessage(
-      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! 🐈🏠`
+      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! ????`
     );
   };
 
@@ -4291,70 +4554,80 @@ tigerModelAnimations.forEach((group) => group.stop());
       }
     };
 
-    engine.runRenderLoop(() => {
-      if (scene.isDisposed) return;
+   
+engine.runRenderLoop(() => {
+  if (scene.isDisposed) return;
 
-      const now = performance.now();
-      const deltaMs = Math.min(now - previousFrameTime, 50);
-      previousFrameTime = now;
-      const dt = deltaMs / 16.667;
+  const now = performance.now();
+  const deltaMs = Math.min(now - previousFrameTime, 50);
+  previousFrameTime = now;
+  const dt = deltaMs / 16.667;
 
-      updateCats(dt, now);
+  updateCats(dt, now);
+  updateHorse(dt, now);
 
-      if (buildMode === "none" && tigerModelLoaded) {
-        const sprinting = keys.has("shift");
-        const moveSpeed = (sprinting ? 0.216 : 0.12) * dt;
-        let moveX = 0;
-        let moveZ = 0;
+  if (buildMode === "none" && tigerModelLoaded) {
+    const sprinting = keys.has("shift");
+    const moveSpeed = (sprinting ? 0.216 : 0.12) * dt;
+    let moveX = 0;
+    let moveZ = 0;
 
-        const verticalDirection = invertedMovementRef.current ? -1 : 1;
+    const verticalDirection = invertedMovementRef.current ? -1 : 1;
 
-        if (keys.has("arrowup") || keys.has("w")) {
-          moveZ -= verticalDirection;
-        }
-        if (keys.has("arrowdown") || keys.has("s")) {
-          moveZ += verticalDirection;
-        }
-        if (keys.has("arrowleft") || keys.has("a")) moveX -= 1;
-        if (keys.has("arrowright") || keys.has("d")) moveX += 1;
+    if (keys.has("arrowup") || keys.has("w")) {
+      moveZ -= verticalDirection;
+    }
 
-        if (moveX !== 0 || moveZ !== 0) {
-          const length = Math.hypot(moveX, moveZ);
-          moveX /= length;
-          moveZ /= length;
+    if (keys.has("arrowdown") || keys.has("s")) {
+      moveZ += verticalDirection;
+    }
 
-          tiger.position.x += moveX * moveSpeed;
-          tiger.position.z += moveZ * moveSpeed;
-          tiger.rotation.y = Math.atan2(moveX, moveZ);
-        }
+    if (keys.has("arrowleft") || keys.has("a")) {
+      moveX -= 1;
+    }
 
-        if (keys.has(" ") && isGrounded) {
-          jumpVelocity = 0.26;
-          isGrounded = false;
-        }
+    if (keys.has("arrowright") || keys.has("d")) {
+      moveX += 1;
+    }
 
-        if (!isGrounded) {
-          tiger.position.y += jumpVelocity * dt;
-          jumpVelocity -= 0.012 * dt;
+    if (moveX !== 0 || moveZ !== 0) {
+      const length = Math.hypot(moveX, moveZ);
+      moveX /= length;
+      moveZ /= length;
 
-          if (tiger.position.y <= 0.8) {
-            tiger.position.y = 0.8;
-            jumpVelocity = 0;
-            isGrounded = true;
-          }
-        }
+      tiger.position.x += moveX * moveSpeed;
+      tiger.position.z += moveZ * moveSpeed;
+      tiger.rotation.y = Math.atan2(moveX, moveZ);
+    }
 
-        // Keep player movement aligned with the expanded world boundaries.
-        tiger.position.x = Math.max(
-          WORLD_MIN_X,
-          Math.min(WORLD_MAX_X, tiger.position.x)
-        );
-        tiger.position.z = Math.max(
-          WORLD_MIN_Z,
-          Math.min(WORLD_MAX_Z, tiger.position.z)
-        );
+    if (keys.has(" ") && isGrounded) {
+      jumpVelocity = 0.26;
+      isGrounded = false;
+    }
+
+    if (!isGrounded) {
+      tiger.position.y += jumpVelocity * dt;
+      jumpVelocity -= 0.012 * dt;
+
+      if (tiger.position.y <= 0.8) {
+        tiger.position.y = 0.8;
+        jumpVelocity = 0;
+        isGrounded = true;
       }
-    
+    }
+
+    // Keep player movement aligned with the expanded world boundaries.
+    tiger.position.x = Math.max(
+      WORLD_MIN_X,
+      Math.min(WORLD_MAX_X, tiger.position.x)
+    );
+
+    tiger.position.z = Math.max(
+      WORLD_MIN_Z,
+      Math.min(WORLD_MAX_Z, tiger.position.z)
+    );
+  }
+
       // Fluid, visible kid locomotion. Blend movement in/out so limbs ease into
       // a stride instead of snapping, while arms and legs counter-swing naturally.
       const tigerMoving =
@@ -4545,7 +4818,7 @@ tigerModelAnimations.forEach((group) => group.stop());
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! ❤️ Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! ?? Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -4865,7 +5138,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
     title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
   >
-    {isFullscreen ? "↙" : "⛶"}
+    {isFullscreen ? "?" : "?"}
   </button>
 
   {/* LEFT HUD */}
@@ -4915,7 +5188,7 @@ tigerModelAnimations.forEach((group) => group.stop());
             boxShadow: "0 0 24px rgba(34,211,238,.22)",
           }}
         >
-          🐯
+          ??
         </div>
         <div>
           <div
@@ -4982,7 +5255,7 @@ tigerModelAnimations.forEach((group) => group.stop());
           }}
         >
           <span>HEALTH</span>
-          <span style={{ color: "#fb7185" }}>♥</span>
+          <span style={{ color: "#fb7185" }}>?</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {health}
@@ -5026,7 +5299,7 @@ tigerModelAnimations.forEach((group) => group.stop());
           }}
         >
           <span>MANA</span>
-          <span style={{ color: "#a78bfa" }}>✦</span>
+          <span style={{ color: "#a78bfa" }}>?</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {mana}
@@ -5061,14 +5334,14 @@ tigerModelAnimations.forEach((group) => group.stop());
       }}
     >
       {[
-        { label: "SLIMES", value: slimesDefeated, icon: "◈", color: "#67e8f9" },
-        { label: "CATS", value: catsRescued, icon: "🐾", color: "#f9a8d4" },
-        { label: "HOUSED", value: catsHoused, icon: "⌂", color: "#86efac" },
-        { label: "WOOD", value: wood, icon: "▥", color: "#fbbf24" },
-        { label: "STONE", value: stone, icon: "◆", color: "#cbd5e1" },
-        { label: "BARNS", value: barnCount, icon: "⌂", color: "#fdba74" },
-        { label: "ROADS", value: roadCount, icon: "↗", color: "#93c5fd" },
-        { label: "WATER", value: waterCount, icon: "≈", color: "#67e8f9" },
+        { label: "SLIMES", value: slimesDefeated, icon: "?", color: "#67e8f9" },
+        { label: "CATS", value: catsRescued, icon: "??", color: "#f9a8d4" },
+        { label: "HOUSED", value: catsHoused, icon: "¦", color: "#86efac" },
+        { label: "WOOD", value: wood, icon: "?", color: "#fbbf24" },
+        { label: "STONE", value: stone, icon: "?", color: "#cbd5e1" },
+        { label: "BARNS", value: barnCount, icon: "¦", color: "#fdba74" },
+        { label: "ROADS", value: roadCount, icon: "?", color: "#93c5fd" },
+        { label: "WATER", value: waterCount, icon: "˜", color: "#67e8f9" },
       ].map((stat) => (
         <div
           key={stat.label}
@@ -5257,7 +5530,7 @@ MAIN QUEST
           cursor: "pointer",
         }}
       >
-        🐾 {canHouseCat ? "HOUSE RESCUED CAT" : "CAT SANCTUARY"}
+        ?? {canHouseCat ? "HOUSE RESCUED CAT" : "CAT SANCTUARY"}
       </button>
 
       <button
@@ -5279,7 +5552,7 @@ MAIN QUEST
           cursor: "pointer",
         }}
       >
-        ↕ Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
+        ? Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
       </button>
     </div>
 
