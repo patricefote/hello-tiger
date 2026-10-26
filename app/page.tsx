@@ -685,68 +685,28 @@ ground.receiveShadows = true;
           root.name = environment.name;
 
           // OCEAN MATERIAL DIAGNOSTICS AND COLOR CORRECTION.
-          // Preserve the imported materials, textures, and tide animation.
+ 
+          // OCEAN MATERIAL DIAGNOSTICS.
+          // Preserve the GLB's original textures, colors, reflections,
+          // and material settings while starting its native animations.
           if (environment.name === "AnimatedOcean") {
-            imported.meshes.forEach((mesh) => {
-              const material = mesh.material;
-
-              if (!material || mesh.getTotalVertices() === 0) return;
-
-              console.log("OCEAN MATERIAL BEFORE CORRECTION", {
-                mesh: mesh.name,
-                material: material.name,
-                type: material.getClassName(),
-                textures: material.getActiveTextures().map((texture) => ({
-                  name: texture.name,
-                  level: texture.level,
+            console.log("OCEAN ORIGINAL MATERIALS", {
+              meshes: imported.meshes
+                .filter((mesh) => mesh.getTotalVertices() > 0)
+                .map((mesh) => ({
+                  mesh: mesh.name,
+                  material: mesh.material?.name ?? "(none)",
+                  type: mesh.material?.getClassName() ?? "(none)",
+                  textures:
+                    mesh.material?.getActiveTextures().map((texture) => ({
+                      name: texture.name,
+                      level: texture.level,
+                      coordinatesIndex: texture.coordinatesIndex,
+                    })) ?? [],
                 })),
-              });
-
-              if (material instanceof StandardMaterial) {
-                // Only replace nearly black diffuse colors.
-                if (
-                  material.diffuseColor.r < 0.03 &&
-                  material.diffuseColor.g < 0.03 &&
-                  material.diffuseColor.b < 0.03
-                ) {
-                  material.diffuseColor = new Color3(0.08, 0.38, 0.52);
-                }
-
-                // Add a subtle blue-green base glow if the material is black.
-                if (
-                  material.emissiveColor.r < 0.005 &&
-                  material.emissiveColor.g < 0.005 &&
-                  material.emissiveColor.b < 0.005
-                ) {
-                  material.emissiveColor = new Color3(0.025, 0.12, 0.18);
-                }
-
-                material.alpha = 1;
-              } else if (material instanceof PBRMaterial) {
-                // PBR materials use albedoColor rather than diffuseColor.
-                if (
-                  material.albedoColor.r < 0.03 &&
-                  material.albedoColor.g < 0.03 &&
-                  material.albedoColor.b < 0.03
-                ) {
-                  material.albedoColor = new Color3(0.08, 0.38, 0.52);
-                }
-
-                if (
-                  material.emissiveColor.r < 0.005 &&
-                  material.emissiveColor.g < 0.005 &&
-                  material.emissiveColor.b < 0.005
-                ) {
-                  material.emissiveColor = new Color3(0.015, 0.08, 0.12);
-                }
-
-               material.metallic = Math.min(material.metallic ?? 0, 0.15);
-               material.roughness = Math.max(material.roughness ?? 0.5, 0.25);
-              }
+              animations: imported.animationGroups.map((group) => group.name),
             });
 
-            // Start every imported animation group; do not replace its
-            // animation with a manually animated surface.
             imported.animationGroups.forEach((group) => {
               group.start(true);
               console.log("OCEAN ANIMATION STARTED", group.name);
