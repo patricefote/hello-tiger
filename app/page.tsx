@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
+import { PBRMaterial } from "@babylonjs/core";
 import {
   AbstractMesh,
   AnimationGroup,
@@ -607,9 +608,8 @@ ground.receiveShadows = true;
     lake.isPickable = false;
     lake.receiveShadows = false;
 
-    
-    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS Our MAP
-    // Diagnostic mode: identify and isolate the mountain sphere.
+    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS OUR MAP
+    // Load and position the mountain, animated ocean, and houses.
     void (async () => {
       const environments: {
         name: string;
@@ -627,6 +627,14 @@ ground.receiveShadows = true;
           z: -55,
           targetFootprint: 450,
           groundOffset: -28.5,
+        },
+        {
+          name: "AnimatedOcean",
+          file: "animated_ocean_scene.glb",
+          x: 100,
+          z: -280,
+          targetFootprint: 330,
+          groundOffset: -164,
         },
         {
           name: "GrandmasHouse",
@@ -676,6 +684,75 @@ ground.receiveShadows = true;
 
           root.name = environment.name;
 
+          // OCEAN MATERIAL DIAGNOSTICS AND COLOR CORRECTION.
+          // Preserve the imported materials, textures, and tide animation.
+          if (environment.name === "AnimatedOcean") {
+            imported.meshes.forEach((mesh) => {
+              const material = mesh.material;
+
+              if (!material || mesh.getTotalVertices() === 0) return;
+
+              console.log("OCEAN MATERIAL BEFORE CORRECTION", {
+                mesh: mesh.name,
+                material: material.name,
+                type: material.getClassName(),
+                textures: material.getActiveTextures().map((texture) => ({
+                  name: texture.name,
+                  level: texture.level,
+                })),
+              });
+
+              if (material instanceof StandardMaterial) {
+                // Only replace nearly black diffuse colors.
+                if (
+                  material.diffuseColor.r < 0.03 &&
+                  material.diffuseColor.g < 0.03 &&
+                  material.diffuseColor.b < 0.03
+                ) {
+                  material.diffuseColor = new Color3(0.08, 0.38, 0.52);
+                }
+
+                // Add a subtle blue-green base glow if the material is black.
+                if (
+                  material.emissiveColor.r < 0.005 &&
+                  material.emissiveColor.g < 0.005 &&
+                  material.emissiveColor.b < 0.005
+                ) {
+                  material.emissiveColor = new Color3(0.025, 0.12, 0.18);
+                }
+
+                material.alpha = 1;
+              } else if (material instanceof PBRMaterial) {
+                // PBR materials use albedoColor rather than diffuseColor.
+                if (
+                  material.albedoColor.r < 0.03 &&
+                  material.albedoColor.g < 0.03 &&
+                  material.albedoColor.b < 0.03
+                ) {
+                  material.albedoColor = new Color3(0.08, 0.38, 0.52);
+                }
+
+                if (
+                  material.emissiveColor.r < 0.005 &&
+                  material.emissiveColor.g < 0.005 &&
+                  material.emissiveColor.b < 0.005
+                ) {
+                  material.emissiveColor = new Color3(0.015, 0.08, 0.12);
+                }
+
+                material.metallic = Math.min(material.metallic, 0.15);
+                material.roughness = Math.max(material.roughness, 0.25);
+              }
+            });
+
+            // Start every imported animation group; do not replace its
+            // animation with a manually animated surface.
+            imported.animationGroups.forEach((group) => {
+              group.start(true);
+              console.log("OCEAN ANIMATION STARTED", group.name);
+            });
+          }
+
           // Measure the original model before applying the group rotation.
           root.computeWorldMatrix(true);
           let bounds = root.getHierarchyBoundingVectors(true);
@@ -686,9 +763,7 @@ ground.receiveShadows = true;
             (bounds.min.z + bounds.max.z) / 2
           );
 
-          // Create a pivot at the visible model center.
-          // Parenting the imported root to this pivot makes the rotation
-          // apply to the entire imported hierarchy.
+          // Create a pivot at the visible model center for rotated assets.
           let environmentPivot: TransformNode | null = null;
 
           if (environment.rotationY) {
@@ -700,11 +775,7 @@ ground.receiveShadows = true;
             environmentPivot.position.copyFrom(originalCenter);
             environmentPivot.rotation.y = environment.rotationY;
 
-            // Preserve the imported root's world transform when reparenting.
             root.setParent(environmentPivot);
-
-            // Move the pivot to the original model center while keeping
-            // the imported model centered on that pivot.
             root.position.subtractInPlace(originalCenter);
             root.computeWorldMatrix(true);
             environmentPivot.computeWorldMatrix(true);
@@ -718,11 +789,10 @@ ground.receiveShadows = true;
             });
           }
 
-          // Use the pivot as the placement/scaling root for rotated assets.
           const placementRoot: TransformNode | Mesh =
             environmentPivot ?? root;
 
-          // Log all meshes for the mountain asset so we can identify its sphere.
+          // Log the mountain mesh hierarchy for future diagnostics.
           if (environment.file === "landscape_forest__mountains.glb") {
             console.log(
               "HELLO TIGER! MOUNTAIN — ALL MESHES",
@@ -763,7 +833,7 @@ ground.receiveShadows = true;
             );
           }
 
-          // Hide the confirmed Japanese sphere, without disposing it.
+          // Hide the Japanese sphere only if that asset is loaded.
           if (
             environment.file === "an_overgrown_japanese-style_location.glb"
           ) {
@@ -812,37 +882,37 @@ ground.receiveShadows = true;
             continue;
           }
 
-          // Scale the entire environment group to its configured footprint.
+          // Scale the entire environment group.
           const scale = environment.targetFootprint / footprint;
           placementRoot.scaling.scaleInPlace(scale);
           placementRoot.computeWorldMatrix(true);
 
           bounds = root.getHierarchyBoundingVectors(true);
 
-          // Center the rotated environment at its configured X/Z coordinates.
+          // Center the environment at its configured X/Z coordinates.
           placementRoot.position.x +=
             environment.x - (bounds.min.x + bounds.max.x) / 2;
 
           placementRoot.position.z +=
             environment.z - (bounds.min.z + bounds.max.z) / 2;
 
-          // Align vertically and apply the configured ground offset.
+          // Align the bottom and apply the configured vertical offset.
           placementRoot.computeWorldMatrix(true);
           bounds = root.getHierarchyBoundingVectors(true);
 
           placementRoot.position.y -= bounds.min.y;
           placementRoot.position.y += environment.groundOffset;
-
           placementRoot.computeWorldMatrix(true);
 
-          // Configure visible environment meshes and their shadows.
+          // Configure environment meshes and shadows.
           imported.meshes.forEach((mesh) => {
             if (mesh.getTotalVertices() === 0 || !mesh.isEnabled()) return;
 
             mesh.isPickable = true;
             mesh.receiveShadows = true;
 
-            if (mesh !== root) {
+            // The animated ocean doesn't need to cast shadows.
+            if (environment.name !== "AnimatedOcean" && mesh !== root) {
               shadowGenerator.addShadowCaster(mesh, true);
             }
           });
@@ -962,13 +1032,11 @@ ground.receiveShadows = true;
         );
 
         imported.meshes.forEach((mesh) => {
-          // Hide the imported sand ground plane.
           if (mesh.name === "Object_4") {
             mesh.setEnabled(false);
             return;
           }
 
-          // Hide the suspected forest-textured horizon dome.
           if (
             mesh.name === "Object_10" &&
             mesh.parent?.name === "Sphere_4"
@@ -977,7 +1045,6 @@ ground.receiveShadows = true;
             return;
           }
 
-          // Preserve the house, smoke, and remaining decorations.
           if (mesh.getTotalVertices() > 0) {
             mesh.isPickable = false;
             mesh.receiveShadows = true;
@@ -998,8 +1065,7 @@ ground.receiveShadows = true;
       }
     })();
 
-    // A cheerful sun and soft, drifting clouds bring the yard to life.
-    // These are decorative sky meshes: they never block movement or picking.
+    // A cheerful sun and soft, drifting clouds.
     const sunMat = makeMaterial("SunnyGold", new Color3(1, 0.78, 0.2));
     sunMat.emissiveColor = new Color3(1, 0.58, 0.08);
     sunMat.disableLighting = true;
@@ -1093,7 +1159,6 @@ ground.receiveShadows = true;
       });
     };
 
-    // Higher clouds spread around the play area.
     makeCloud("CloudNorthWest", -25, 68, -27, 1.25, 0.3, 1.0);
     makeCloud("CloudNorthEast", 22, 74, -29, 1.05, 1.7, -0.8);
     makeCloud("CloudWest", -32, 65, -2, 0.9, 2.4, 0.7);
@@ -1101,85 +1166,77 @@ ground.receiveShadows = true;
     makeCloud("CloudSouthWest", -24, 76, 27, 1.0, 4.2, 0.8);
     makeCloud("CloudSouthEast", 25, 66, 29, 1.2, 5.1, -0.7);
 
-   // STARTER HOUSE — SMALL HUT SHELTER
-void (async () => {
-  try {
-    const imported = await SceneLoader.ImportMeshAsync(
-      "",
-      "/models/",
-      "small_hut_shelter_house_3d_model_free.glb",
-      scene
-    );
+    // STARTER HOUSE — SMALL HUT SHELTER
+    void (async () => {
+      try {
+        const imported = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "small_hut_shelter_house_3d_model_free.glb",
+          scene
+        );
 
-    const root =
-      imported.meshes.find((mesh) => mesh.name === "__root__") ??
-      imported.meshes.find((mesh) => mesh.parent === null) ??
-      imported.meshes[0];
+        const root =
+          imported.meshes.find((mesh) => mesh.name === "__root__") ??
+          imported.meshes.find((mesh) => mesh.parent === null) ??
+          imported.meshes[0];
 
-    if (!root) {
-      throw new Error("Small hut GLB did not provide a root mesh.");
-    }
+        if (!root || scene.isDisposed) {
+          imported.meshes.forEach((mesh) => mesh.dispose());
+          return;
+        }
 
-    root.name = "StarterHouseRoot";
+        root.name = "StarterHouseRoot";
+        root.scaling.setAll(15.3);
+        root.rotation.y = -Math.PI / 2;
+        root.position.set(0, 0, 0);
+        root.computeWorldMatrix(true);
 
-    // Increase the current scale by 1.8 times: 8.5 × 1.8 = 15.3.
-    root.scaling.setAll(15.3);
+        let bounds = root.getHierarchyBoundingVectors(true);
 
-    // Rotate 90 degrees counterclockwise when viewed from above.
-    root.rotation.y = -Math.PI / 2;
+        const centerX = (bounds.min.x + bounds.max.x) / 2;
+        const centerZ = (bounds.min.z + bounds.max.z) / 2;
 
-    // Initialize transforms before calculating the enlarged, rotated bounds.
-    root.position.set(0, 0, 0);
-    root.computeWorldMatrix(true);
+        root.position.set(
+          -0.616 - centerX,
+          0.898 - bounds.min.y,
+          7.994 - centerZ
+        );
 
-    let bounds = root.getHierarchyBoundingVectors(true);
+        root.computeWorldMatrix(true);
+        bounds = root.getHierarchyBoundingVectors(true);
 
-    // Center the hut at its original spawn-house location.
-    const centerX = (bounds.min.x + bounds.max.x) / 2;
-    const centerZ = (bounds.min.z + bounds.max.z) / 2;
+        root.position.y += 0.898 - bounds.min.y;
+        root.computeWorldMatrix(true);
 
-    // Place the bottom of the hut at ground height Y = 0.898.
-    root.position.set(
-      -0.616 - centerX,
-      0.898 - bounds.min.y,
-      7.994 - centerZ
-    );
+        imported.meshes.forEach((mesh) => {
+          if (mesh.getTotalVertices() > 0) {
+            mesh.receiveShadows = true;
+            shadowGenerator.addShadowCaster(mesh);
+          }
+        });
 
-    root.computeWorldMatrix(true);
+        bounds = root.getHierarchyBoundingVectors(true);
 
-    // Recalculate bounds after positioning and correct any remaining
-    // vertical offset so the hut's lowest point meets the ground.
-    bounds = root.getHierarchyBoundingVectors(true);
-    root.position.y += 0.898 - bounds.min.y - 0.898;
-    root.computeWorldMatrix(true);
-
-    imported.meshes.forEach((mesh) => {
-      if (mesh.getTotalVertices() > 0) {
-        mesh.receiveShadows = true;
-        shadowGenerator.addShadowCaster(mesh);
+        console.log("Small hut starter house loaded.", {
+          meshCount: imported.meshes.length,
+          position: root.position.asArray(),
+          scale: root.scaling.asArray(),
+          rotationY: root.rotation.y,
+          boundsMin: bounds.min.asArray(),
+          boundsMax: bounds.max.asArray(),
+        });
+      } catch (error) {
+        console.error("Failed to load small hut starter house:", error);
       }
-    });
+    })();
 
-    bounds = root.getHierarchyBoundingVectors(true);
-
-    console.log("Small hut starter house loaded.", {
-      meshCount: imported.meshes.length,
-      position: root.position.asArray(),
-      scale: root.scaling.asArray(),
-      rotationY: root.rotation.y,
-      boundsMin: bounds.min.asArray(),
-      boundsMax: bounds.max.asArray(),
-    });
-  } catch (error) {
-    console.error("Failed to load small hut starter house:", error);
-  }
-})();
     // Two decorative barn landmarks — scenery only, not player-built.
     void (async () => {
       const barnPositions = [
-       { x: -15, z: 19 },
-       { x: -34, z: 19 },
-           ];
+        { x: -15, z: 19 },
+        { x: -34, z: 19 },
+      ];
 
       for (const [index, position] of barnPositions.entries()) {
         try {
@@ -1194,19 +1251,17 @@ void (async () => {
             imported.meshes.find((mesh) => mesh.name === "__root__") ??
             imported.meshes[0];
 
-          if (!root) {
-            throw new Error(`Barn ${index + 1} GLB has no root mesh.`);
+          if (!root || scene.isDisposed) {
+            imported.meshes.forEach((mesh) => mesh.dispose());
+            continue;
           }
 
-                   // Scale the decorative barn.
           root.scaling.setAll(2.5);
           root.position.set(0, 0, 0);
-
-          // Calculate the enlarged barn's bounds.
           root.computeWorldMatrix(true);
+
           let bounds = root.getHierarchyBoundingVectors(true);
 
-          // Center the barn horizontally and align its base to the ground.
           const centerX = (bounds.min.x + bounds.max.x) / 2;
           const centerZ = (bounds.min.z + bounds.max.z) / 2;
 
@@ -1216,11 +1271,9 @@ void (async () => {
             position.z - centerZ
           );
 
-          // Refresh world matrices and verify final ground alignment.
           root.computeWorldMatrix(true);
           bounds = root.getHierarchyBoundingVectors(true);
 
-          // Correct any remaining vertical offset.
           root.position.y -= bounds.min.y;
           root.computeWorldMatrix(true);
 
@@ -1230,6 +1283,8 @@ void (async () => {
               shadowGenerator.addShadowCaster(mesh);
             }
           });
+
+          bounds = root.getHierarchyBoundingVectors(true);
 
           console.log(
             `Decorative barn ${index + 1} loaded at:`,
