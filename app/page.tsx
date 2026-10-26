@@ -631,10 +631,10 @@ ground.receiveShadows = true;
         {
           name: "AnimatedOcean",
           file: "animated_ocean_scene.glb",
-          x: 100,
-          z: -280,
-          targetFootprint: 330,
-          groundOffset: -164,
+          x: -380,
+          z: 100,
+          targetFootprint: 280,
+          groundOffset: -134,
         },
         {
           name: "GrandmasHouse",
@@ -740,8 +740,8 @@ ground.receiveShadows = true;
                   material.emissiveColor = new Color3(0.015, 0.08, 0.12);
                 }
 
-                material.metallic = Math.min(material.metallic, 0.15);
-                material.roughness = Math.max(material.roughness, 0.25);
+               material.metallic = Math.min(material.metallic ?? 0, 0.15);
+               material.roughness = Math.max(material.roughness ?? 0.5, 0.25);
               }
             });
 
