@@ -3680,6 +3680,26 @@ tigerModelAnimations.forEach((group) => group.stop());
     npcMarker.position.set(npcX, 2.25, npcZ);
     npcMarker.material = manaMat;
 
+    // Proximity highlight: shown only when Tiger can interact with something.
+    const interactionRingMat = new StandardMaterial(
+      "InteractionRingMaterial",
+      scene
+    );
+    interactionRingMat.diffuseColor = new Color3(1, 0.82, 0.25);
+    interactionRingMat.emissiveColor = new Color3(1, 0.58, 0.08);
+    interactionRingMat.disableLighting = true;
+
+    const interactionRing = MeshBuilder.CreateTorus(
+      "NearbyInteractableRing",
+      { diameter: 2.25, thickness: 0.075, tessellation: 48 },
+      scene
+    );
+    interactionRing.rotation.x = Math.PI / 2;
+    interactionRing.position.y = 0.075;
+    interactionRing.material = interactionRingMat;
+    interactionRing.isPickable = false;
+    interactionRing.setEnabled(false);
+
     // Slimes.
     const slimes: Slime[] = [];
 
@@ -3725,6 +3745,26 @@ tigerModelAnimations.forEach((group) => group.stop());
     createSlime(7, -2, 1);
     createSlime(10, 7, 2);
     createSlime(-12, 9, 3);
+
+    // Cyan ring identifies the slime that soft-lock aiming will favor.
+    const slimeTargetRingMat = new StandardMaterial(
+      "SlimeTargetRingMaterial",
+      scene
+    );
+    slimeTargetRingMat.diffuseColor = new Color3(0.25, 0.95, 1);
+    slimeTargetRingMat.emissiveColor = new Color3(0.08, 0.72, 1);
+    slimeTargetRingMat.disableLighting = true;
+
+    const slimeTargetRing = MeshBuilder.CreateTorus(
+      "SlimeSoftTargetRing",
+      { diameter: 1.9, thickness: 0.09, tessellation: 48 },
+      scene
+    );
+    slimeTargetRing.rotation.x = Math.PI / 2;
+    slimeTargetRing.position.y = 0.09;
+    slimeTargetRing.material = slimeTargetRingMat;
+    slimeTargetRing.isPickable = false;
+    slimeTargetRing.setEnabled(false);
 
     const projectiles: Projectile[] = [];
 
@@ -4388,7 +4428,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     catsHousedCount += 1;
     setCatsHoused(catsHousedCount);
     setMessage(
-      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! ????`
+      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! 🐾`
     );
   };
 
@@ -4406,9 +4446,43 @@ tigerModelAnimations.forEach((group) => group.stop());
     manaCount -= 1;
     setMana(manaCount);
 
-    // Match the attack direction to Tiger's facing.
-    const dx = Math.sin(tiger.rotation.y);
-    const dz = Math.cos(tiger.rotation.y);
+    // Soft lock: favor the nearest living slime in front of Tiger.
+    // The character keeps its four-direction movement; only the magic bolt
+    // receives the assisted aim direction.
+    const facingAngle = tiger.rotation.y;
+    let targetSlime: Slime | null = null;
+    let targetDistance = 18;
+
+    for (const slime of slimes) {
+      if (!slime.alive) continue;
+
+      const toSlimeX = slime.x - tiger.position.x;
+      const toSlimeZ = slime.z - tiger.position.z;
+      const distance = Math.hypot(toSlimeX, toSlimeZ);
+      if (distance >= targetDistance || distance < 0.01) continue;
+
+      const targetAngle = Math.atan2(toSlimeX, toSlimeZ);
+      const angleDifference = Math.atan2(
+        Math.sin(targetAngle - facingAngle),
+        Math.cos(targetAngle - facingAngle)
+      );
+
+      // A 70-degree half-cone avoids snapping to enemies behind the player.
+      if (Math.abs(angleDifference) <= (70 * Math.PI) / 180) {
+        targetSlime = slime;
+        targetDistance = distance;
+      }
+    }
+
+    const aimX = targetSlime
+      ? targetSlime.x - tiger.position.x
+      : Math.sin(facingAngle);
+    const aimZ = targetSlime
+      ? targetSlime.z - tiger.position.z
+      : Math.cos(facingAngle);
+    const aimLength = Math.hypot(aimX, aimZ) || 1;
+    const dx = aimX / aimLength;
+    const dz = aimZ / aimLength;
     const angle = Math.atan2(dx, dz);
 
     const projectile = MeshBuilder.CreateBox(
@@ -5266,7 +5340,7 @@ engine.runRenderLoop(() => {
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! ?? Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! ❤️ Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -5274,6 +5348,103 @@ engine.runRenderLoop(() => {
             );
           }
         }
+      }
+
+      // Highlight the nearest object that the existing E interaction can use.
+      let interactionX = npcX;
+      let interactionZ = npcZ;
+      let interactionDistance = Math.hypot(
+        tiger.position.x - npcX,
+        tiger.position.z - npcZ
+      );
+      const hasParisInteraction = interactionDistance < 2.4;
+      let hasInteractionTarget = hasParisInteraction;
+
+      // Match the interaction priority: Paris, then an unrescued cat, then resources.
+      if (!hasInteractionTarget) {
+        let nearestCat: Cat | null = null;
+        let nearestCatDistance = Infinity;
+
+        for (const cat of cats) {
+          if (cat.rescued) continue;
+          const distance = Math.hypot(
+            tiger.position.x - cat.x,
+            tiger.position.z - cat.z
+          );
+          if (distance < nearestCatDistance) {
+            nearestCat = cat;
+            nearestCatDistance = distance;
+          }
+        }
+
+        if (nearestCat && nearestCatDistance < 2.1) {
+          interactionX = nearestCat.x;
+          interactionZ = nearestCat.z;
+          hasInteractionTarget = true;
+        }
+      }
+
+      if (!hasInteractionTarget) {
+        let nearestResource: Resource | null = null;
+        let nearestResourceDistance = Infinity;
+
+        for (const resource of resources) {
+          if (resource.collected) continue;
+          const distance = Math.hypot(
+            tiger.position.x - resource.x,
+            tiger.position.z - resource.z
+          );
+          if (distance < nearestResourceDistance) {
+            nearestResource = resource;
+            nearestResourceDistance = distance;
+          }
+        }
+
+        if (nearestResource && nearestResourceDistance < 3.5) {
+          interactionX = nearestResource.x;
+          interactionZ = nearestResource.z;
+          hasInteractionTarget = true;
+        }
+      }
+
+      if (hasInteractionTarget) {
+        interactionRing.position.x = interactionX;
+        interactionRing.position.z = interactionZ;
+        interactionRing.setEnabled(true);
+      } else {
+        interactionRing.setEnabled(false);
+      }
+
+      // Show the soft-lock target so the player can see which slime will be favored.
+      let highlightedSlime: Slime | null = null;
+      let highlightedDistance = 18;
+      const playerFacing = tiger.rotation.y;
+
+      for (const slime of slimes) {
+        if (!slime.alive) continue;
+        const dx = slime.x - tiger.position.x;
+        const dz = slime.z - tiger.position.z;
+        const distance = Math.hypot(dx, dz);
+        if (distance >= highlightedDistance || distance < 0.01) continue;
+
+        const angle = Math.atan2(dx, dz);
+        const difference = Math.atan2(
+          Math.sin(angle - playerFacing),
+          Math.cos(angle - playerFacing)
+        );
+
+        if (Math.abs(difference) <= (70 * Math.PI) / 180) {
+          highlightedSlime = slime;
+          highlightedDistance = distance;
+        }
+      }
+
+      if (highlightedSlime) {
+        slimeTargetRing.position.x = highlightedSlime.x;
+        slimeTargetRing.position.z = highlightedSlime.z;
+        slimeTargetRing.setEnabled(true);
+      } else {
+        slimeTargetRing.setEnabled(false);
       }
 
       // Quest marker.
@@ -5586,7 +5757,7 @@ engine.runRenderLoop(() => {
     aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
     title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
   >
-    {isFullscreen ? "?" : "?"}
+    {isFullscreen ? "⛶" : "⛶"}
   </button>
 
   {/* LEFT HUD */}
@@ -5636,7 +5807,7 @@ engine.runRenderLoop(() => {
             boxShadow: "0 0 24px rgba(34,211,238,.22)",
           }}
         >
-          ??
+          🐯
         </div>
         <div>
           <div
@@ -5703,7 +5874,7 @@ engine.runRenderLoop(() => {
           }}
         >
           <span>HEALTH</span>
-          <span style={{ color: "#fb7185" }}>?</span>
+          <span style={{ color: "#fb7185" }}>♥</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {health}
@@ -5747,7 +5918,7 @@ engine.runRenderLoop(() => {
           }}
         >
           <span>MANA</span>
-          <span style={{ color: "#a78bfa" }}>?</span>
+          <span style={{ color: "#a78bfa" }}>✦</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {mana}
@@ -5782,14 +5953,14 @@ engine.runRenderLoop(() => {
       }}
     >
       {[
-        { label: "SLIMES", value: slimesDefeated, icon: "?", color: "#67e8f9" },
-        { label: "CATS", value: catsRescued, icon: "??", color: "#f9a8d4" },
-        { label: "HOUSED", value: catsHoused, icon: "¦", color: "#86efac" },
-        { label: "WOOD", value: wood, icon: "?", color: "#fbbf24" },
-        { label: "STONE", value: stone, icon: "?", color: "#cbd5e1" },
-        { label: "BARNS", value: barnCount, icon: "¦", color: "#fdba74" },
-        { label: "ROADS", value: roadCount, icon: "?", color: "#93c5fd" },
-        { label: "WATER", value: waterCount, icon: "˜", color: "#67e8f9" },
+        { label: "SLIMES", value: slimesDefeated, icon: "🟢", color: "#67e8f9" },
+        { label: "CATS", value: catsRescued, icon: "🐈", color: "#f9a8d4" },
+        { label: "HOUSED", value: catsHoused, icon: "🏠", color: "#86efac" },
+        { label: "WOOD", value: wood, icon: "🪵", color: "#fbbf24" },
+        { label: "STONE", value: stone, icon: "🪨", color: "#cbd5e1" },
+        { label: "BARNS", value: barnCount, icon: "🚜", color: "#fdba74" },
+        { label: "ROADS", value: roadCount, icon: "🛣️", color: "#93c5fd" },
+        { label: "WATER", value: waterCount, icon: "💧", color: "#67e8f9" },
       ].map((stat) => (
         <div
           key={stat.label}
@@ -5978,7 +6149,7 @@ MAIN QUEST
           cursor: "pointer",
         }}
       >
-        ?? {canHouseCat ? "HOUSE RESCUED CAT" : "CAT SANCTUARY"}
+        🐈 {canHouseCat ? "HOUSE RESCUED CAT" : "CAT SANCTUARY"}
       </button>
 
       <button
@@ -6000,7 +6171,7 @@ MAIN QUEST
           cursor: "pointer",
         }}
       >
-        ? Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
+        ↕ Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
       </button>
     </div>
 
