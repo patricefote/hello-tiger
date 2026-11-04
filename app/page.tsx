@@ -136,6 +136,163 @@ export default function Home() {
 
   const canHouseCat = barnBuilt && catsRescued > catsHoused;
 
+    // MOBILE CONTROLLER — reuse the existing keyboard input system.
+  const sendMobileKey = (
+    key: string,
+    type: "keydown" | "keyup" = "keydown"
+  ) => {
+    window.dispatchEvent(
+      new KeyboardEvent(type, {
+        key,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  };
+
+  const updateMobileJoystick = (
+    event: React.PointerEvent<HTMLDivElement>
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const pad = event.currentTarget;
+
+    if (pad.dataset.pointerId !== String(event.pointerId)) return;
+
+    const rect = pad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const dx = event.clientX - centerX;
+    const dy = event.clientY - centerY;
+
+    const radius = rect.width * 0.34;
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > radius ? radius / distance : 1;
+
+    const offsetX = dx * scale;
+    const offsetY = dy * scale;
+
+    const knob = pad.querySelector(
+      ".mobile-stick-knob"
+    ) as HTMLDivElement | null;
+
+    if (knob) {
+      knob.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
+
+    const threshold = radius * 0.28;
+    const nextKeys: string[] = [];
+
+    if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        nextKeys.push(dx < 0 ? "a" : "d");
+      } else {
+        nextKeys.push(dy < 0 ? "w" : "s");
+      }
+    }
+
+    const previousKeys: string[] = JSON.parse(
+      pad.dataset.activeKeys || "[]"
+    );
+
+    previousKeys
+      .filter((key) => !nextKeys.includes(key))
+      .forEach((key) => sendMobileKey(key, "keyup"));
+
+    nextKeys
+      .filter((key) => !previousKeys.includes(key))
+      .forEach((key) => sendMobileKey(key, "keydown"));
+
+    pad.dataset.activeKeys = JSON.stringify(nextKeys);
+  };
+
+  const startMobileJoystick = (
+    event: React.PointerEvent<HTMLDivElement>
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const pad = event.currentTarget;
+
+    pad.dataset.pointerId = String(event.pointerId);
+    pad.setPointerCapture(event.pointerId);
+
+    updateMobileJoystick(event);
+  };
+
+  const releaseMobileJoystick = (
+    event: React.PointerEvent<HTMLDivElement>
+  ) => {
+    const pad = event.currentTarget;
+
+    if (pad.dataset.pointerId !== String(event.pointerId)) return;
+
+    const activeKeys: string[] = JSON.parse(
+      pad.dataset.activeKeys || "[]"
+    );
+
+    activeKeys.forEach((key) => sendMobileKey(key, "keyup"));
+
+    pad.dataset.activeKeys = "[]";
+    pad.dataset.pointerId = "";
+
+    const knob = pad.querySelector(
+      ".mobile-stick-knob"
+    ) as HTMLDivElement | null;
+
+    if (knob) {
+      knob.style.transform = "translate(0px, 0px)";
+    }
+  };
+
+  const mobileActionButton = (
+    label: string,
+    key: string,
+    held = false
+  ) => (
+    <button
+      key={label}
+      type="button"
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        event.currentTarget.setPointerCapture(event.pointerId);
+        sendMobileKey(key, "keydown");
+      }}
+      onPointerUp={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (held) sendMobileKey(key, "keyup");
+      }}
+      onPointerCancel={() => {
+        if (held) sendMobileKey(key, "keyup");
+      }}
+      onLostPointerCapture={() => {
+        if (held) sendMobileKey(key, "keyup");
+      }}
+      style={{
+        minWidth: 62,
+        minHeight: 54,
+        padding: "9px 12px",
+        borderRadius: 15,
+        border: "1px solid rgba(255,255,255,0.3)",
+        background: "rgba(25,35,55,0.88)",
+        color: "white",
+        fontWeight: 800,
+        fontSize: 12,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        touchAction: "none",
+        userSelect: "none",
+      }}
+    >
+      {label}
+    </button>
+  );
+
   useEffect(() => {
     const syncFullscreenState = () => {
       setIsFullscreen(document.fullscreenElement === gameRootRef.current);
@@ -5434,7 +5591,7 @@ engine.runRenderLoop(() => {
 
   {/* LEFT HUD */}
   <section
-    className="game-hud-scroll"
+    className="game-hud-scroll game-left-hud"
     style={{
       position: "fixed",
       top: 18,
@@ -5867,7 +6024,7 @@ MAIN QUEST
 
   {/* RIGHT CONTROLS */}
   <aside
-    className="game-hud-scroll"
+    className="game-hud-scroll game-right-hud"
     style={{
       position: "fixed",
       right: 18,
@@ -6015,6 +6172,154 @@ MAIN QUEST
       </div>
     </div>
   </aside>
+        {/* MOBILE GAME CONTROLLER */}
+      <style>{`
+        .mobile-controller {
+          display: none;
+        }
+
+        .mobile-joystick {
+          width: 138px;
+          height: 138px;
+          border-radius: 50%;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(25, 35, 55, 0.58);
+          border: 2px solid rgba(255,255,255,0.45);
+          box-shadow: 0 5px 18px rgba(0,0,0,0.3);
+          touch-action: none;
+          user-select: none;
+        }
+
+        .mobile-stick-knob {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 54px;
+          height: 54px;
+          margin-left: -27px;
+          margin-top: -27px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.85);
+          border: 2px solid rgba(255,255,255,0.95);
+          box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+          pointer-events: none;
+        }
+
+        .mobile-actions {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          justify-items: center;
+          align-items: center;
+        }
+
+        .mobile-controller button:active {
+          transform: scale(0.94);
+          background: rgba(65, 105, 165, 0.95) !important;
+        }
+
+        @media (pointer: coarse), (max-width: 760px) {
+          .mobile-controller {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: max(14px, env(safe-area-inset-bottom));
+            z-index: 950;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 14px;
+            pointer-events: none;
+          }
+
+          .mobile-controller > * {
+            pointer-events: auto;
+          }
+
+          .game-right-hud {
+            display: none !important;
+          }
+
+          .game-left-hud {
+            top: max(8px, env(safe-area-inset-top)) !important;
+            left: 8px !important;
+            width: 190px !important;
+            max-width: calc(100vw - 16px) !important;
+            max-height: 27dvh !important;
+            overflow-y: auto !important;
+            padding: 9px !important;
+          }
+
+          .mobile-joystick {
+            width: 120px;
+            height: 120px;
+          }
+
+          .mobile-stick-knob {
+            width: 48px;
+            height: 48px;
+            margin-left: -24px;
+            margin-top: -24px;
+          }
+        }
+
+        @media (max-width: 430px) {
+          .mobile-joystick {
+            width: 108px;
+            height: 108px;
+          }
+
+          .mobile-actions {
+            gap: 6px;
+          }
+
+          .mobile-controller button {
+            min-width: 55px !important;
+            min-height: 48px !important;
+            padding: 7px !important;
+            font-size: 11px !important;
+          }
+
+          .game-left-hud {
+            width: 160px !important;
+            max-height: 23dvh !important;
+          }
+        }
+      `}</style>
+
+      <div className="mobile-controller">
+        {/* LEFT THUMB — MOVEMENT */}
+        <div
+          className="mobile-joystick"
+          onPointerDown={startMobileJoystick}
+          onPointerMove={updateMobileJoystick}
+          onPointerUp={releaseMobileJoystick}
+          onPointerCancel={releaseMobileJoystick}
+          onLostPointerCapture={releaseMobileJoystick}
+        >
+          <div className="mobile-stick-knob" />
+        </div>
+
+        {/* RIGHT THUMB — GAME ACTIONS */}
+        <div className="mobile-actions">
+          {mobileActionButton("JUMP", " ", true)}
+          {mobileActionButton("SPRINT", "Shift", true)}
+          {mobileActionButton("INTERACT", "e")}
+          {mobileActionButton("MAGIC", "f")}
+          {mobileActionButton("HOUSE CAT", "h")}
+          {mobileActionButton("CHARM", "c")}
+          {mobileActionButton("BARN", "b")}
+          {mobileActionButton("ROAD", "t")}
+          {mobileActionButton("WATER", "y")}
+          {mobileActionButton("ROTATE ↶", "q")}
+          {mobileActionButton("ROTATE ↷", "r")}
+          {mobileActionButton("PLACE", "Enter")}
+          {mobileActionButton("CANCEL", "Escape")}
+        </div>
+      </div>
 </main>
   );
 }
