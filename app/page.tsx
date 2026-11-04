@@ -6256,29 +6256,63 @@ MAIN QUEST
       }}
     >
       {[
-        ["W A S D", "Move"],
-        ["ARROWS", "Move"],
-        ["SHIFT", "Sprint"],
-        ["MOUSE", "Look around"],
-        ["WHEEL", "Zoom camera"],
-        ["SPACE", "Jump / stomp"],
-        ["F", "Fire magic bolt"],
-        ["C", "Craft charm"],
-        ["E", "Interact / rescue / collect"],
-        ["B", "Barn build mode"],
-        ["T", "Road build mode"],
-        ["Q / R", "Rotate build preview"],
-        ["ENTER", "Build / place"],
-        ["ESC", "Cancel / exit build mode"],
-      ].map(([key, description]) => (
-        <div
+        ["W A S D", "Move", null],
+        ["ARROWS", "Move", null],
+        ["SHIFT", "Sprint", "Shift"],
+        ["MOUSE", "Look around", null],
+        ["WHEEL", "Zoom camera", null],
+        ["SPACE", "Jump / stomp", " "],
+        ["F", "Fire magic bolt", "f"],
+        ["C", "Craft charm", "c"],
+        ["E", "Interact / rescue / collect", "e"],
+        ["H", "House rescued cat", "h"],
+        ["B", "Barn build mode", "b"],
+        ["T", "Road build mode", "t"],
+        ["Y", "Water build mode", "y"],
+        ["Q", "Rotate build preview left", "q"],
+        ["R", "Rotate build preview right", "r"],
+        ["ENTER", "Build / place", "Enter"],
+        ["ESC", "Cancel / exit build mode", "Escape"],
+      ].map(([key, description, action]) => (
+        <button
           key={key}
+          type="button"
+          aria-label={action ? `${description} (${key})` : `${description}: ${key}`}
+          title={action ? `Tap to ${description.toLowerCase()}` : `${key}: ${description}`}
+          onPointerDown={(event) => {
+            if (!action) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            sendMobileKey(action, "keydown");
+          }}
+          onPointerUp={(event) => {
+            if (!action) return;
+            event.preventDefault();
+            event.stopPropagation();
+            sendMobileKey(action, "keyup");
+          }}
+          onPointerCancel={() => {
+            if (action) sendMobileKey(action, "keyup");
+          }}
+          onLostPointerCapture={() => {
+            if (action) sendMobileKey(action, "keyup");
+          }}
           style={{
             minWidth: 0,
             padding: 8,
             borderRadius: 10,
             border: "1px solid rgba(148,163,184,.12)",
-            background: "rgba(255,255,255,.035)",
+            background: action
+              ? "linear-gradient(135deg,rgba(34,211,238,.10),rgba(99,102,241,.10))"
+              : "rgba(255,255,255,.035)",
+            color: "inherit",
+            textAlign: "left",
+            font: "inherit",
+            cursor: action ? "pointer" : "default",
+            touchAction: action ? "none" : "auto",
+            userSelect: "none",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
           <div
@@ -6302,7 +6336,7 @@ MAIN QUEST
           >
             {description}
           </div>
-        </div>
+        </button>
       ))}
     </div>
 
@@ -6457,6 +6491,58 @@ MAIN QUEST
           .game-left-hud {
             width: 160px !important;
             max-height: 23dvh !important;
+          }
+        }
+
+        /* In landscape, use the existing desktop How to Play panel as the
+           touch action pad on the right; keep the movement joystick left. */
+        @media (pointer: coarse) and (orientation: landscape) {
+          .game-right-hud {
+            display: block !important;
+            position: fixed !important;
+            top: max(8px, env(safe-area-inset-top)) !important;
+            right: max(8px, env(safe-area-inset-right)) !important;
+            bottom: max(8px, env(safe-area-inset-bottom)) !important;
+            left: auto !important;
+            width: min(300px, 31vw) !important;
+            max-width: 31vw !important;
+            max-height: calc(100dvh - 16px) !important;
+            padding: 10px !important;
+            overflow-y: auto !important;
+            background: linear-gradient(145deg,rgba(9,18,34,.88),rgba(12,24,43,.78)) !important;
+          }
+
+          .game-right-hud > div:nth-of-type(2) {
+            gap: 5px !important;
+          }
+
+          .game-right-hud button {
+            min-height: 42px;
+            padding: 6px !important;
+          }
+
+          .mobile-controller {
+            right: auto;
+            left: max(12px, env(safe-area-inset-left));
+            bottom: max(12px, env(safe-area-inset-bottom));
+            width: 132px;
+            padding: 0;
+          }
+
+          .mobile-actions {
+            display: none !important;
+          }
+
+          .mobile-joystick {
+            width: 112px;
+            height: 112px;
+          }
+
+          .game-left-hud {
+            top: max(8px, env(safe-area-inset-top)) !important;
+            left: max(8px, env(safe-area-inset-left)) !important;
+            width: 170px !important;
+            max-height: 34dvh !important;
           }
         }
       `}</style>
