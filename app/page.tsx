@@ -248,6 +248,7 @@ export default function Home() {
     }
   };
 
+ 
   const mobileActionButton = (
     label: string,
     key: string,
@@ -270,20 +271,35 @@ export default function Home() {
       onPointerCancel={() => sendMobileKey(key, "keyup")}
       onLostPointerCapture={() => sendMobileKey(key, "keyup")}
       style={{
-        minWidth: 62,
-        minHeight: 54,
-        padding: "9px 12px",
-        borderRadius: 15,
-        border: "1px solid rgba(255,255,255,0.3)",
-        background: "rgba(25,35,55,0.88)",
-        color: "white",
-        fontWeight: 800,
-        fontSize: 12,
-        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        width: 76,
+        height: 76,
+        minWidth: 76,
+        minHeight: 76,
+        padding: 6,
+        boxSizing: "border-box",
+        borderRadius: 20,
+        border: "2px solid rgba(255, 207, 126, 0.8)",
+        background:
+          "linear-gradient(145deg, rgba(55, 78, 112, 0.98), rgba(20, 31, 53, 0.98))",
+        color: "#FFF4D6",
+        fontWeight: 900,
+        fontSize: 11,
+        letterSpacing: "0.5px",
+        textAlign: "center",
+        lineHeight: 1.2,
+        boxShadow:
+          "0 5px 0 rgba(8, 14, 27, 0.85), 0 0 14px rgba(255, 190, 90, 0.2)",
         touchAction: "none",
         userSelect: "none",
         WebkitUserSelect: "none",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        cursor: "pointer",
+        transition: "transform 100ms ease, filter 100ms ease",
       }}
+      onContextMenu={(event) => event.preventDefault()}
     >
       {label}
     </button>
