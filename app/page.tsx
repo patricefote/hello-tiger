@@ -139,7 +139,8 @@ export default function Home() {
 
   const canHouseCat = barnBuilt && catsRescued > catsHoused;
 
-    // MOBILE CONTROLLER — reuse the existing keyboard input system.
+   
+  // MOBILE CONTROLLER — reuse the existing keyboard input system.
   const sendMobileKey = (
     key: string,
     type: "keydown" | "keyup" = "keydown"
@@ -160,7 +161,6 @@ export default function Home() {
     event.stopPropagation();
 
     const pad = event.currentTarget;
-
     if (pad.dataset.pointerId !== String(event.pointerId)) return;
 
     const rect = pad.getBoundingClientRect();
@@ -218,7 +218,6 @@ export default function Home() {
     event.stopPropagation();
 
     const pad = event.currentTarget;
-
     pad.dataset.pointerId = String(event.pointerId);
     pad.setPointerCapture(event.pointerId);
 
@@ -229,7 +228,6 @@ export default function Home() {
     event: React.PointerEvent<HTMLDivElement>
   ) => {
     const pad = event.currentTarget;
-
     if (pad.dataset.pointerId !== String(event.pointerId)) return;
 
     const activeKeys: string[] = JSON.parse(
@@ -261,22 +259,16 @@ export default function Home() {
       onPointerDown={(event) => {
         event.preventDefault();
         event.stopPropagation();
-
         event.currentTarget.setPointerCapture(event.pointerId);
         sendMobileKey(key, "keydown");
       }}
       onPointerUp={(event) => {
         event.preventDefault();
         event.stopPropagation();
-
-        if (held) sendMobileKey(key, "keyup");
+        sendMobileKey(key, "keyup");
       }}
-      onPointerCancel={() => {
-        if (held) sendMobileKey(key, "keyup");
-      }}
-      onLostPointerCapture={() => {
-        if (held) sendMobileKey(key, "keyup");
-      }}
+      onPointerCancel={() => sendMobileKey(key, "keyup")}
+      onLostPointerCapture={() => sendMobileKey(key, "keyup")}
       style={{
         minWidth: 62,
         minHeight: 54,
@@ -290,6 +282,7 @@ export default function Home() {
         boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
         touchAction: "none",
         userSelect: "none",
+        WebkitUserSelect: "none",
       }}
     >
       {label}
@@ -303,35 +296,56 @@ export default function Home() {
   ) => {
     const entry: Record<string, unknown> = {
       timestamp: new Date().toISOString(),
-      elapsedMs: typeof performance !== "undefined" ? Math.round(performance.now()) : null,
+      elapsedMs:
+        typeof performance !== "undefined"
+          ? Math.round(performance.now())
+          : null,
       type,
       detail,
-      device: typeof navigator !== "undefined" ? {
-        userAgent: navigator.userAgent,
-        language: navigator.language,
-        platform: navigator.platform,
-        online: navigator.onLine,
-        deviceMemoryGB: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
-        hardwareConcurrency: navigator.hardwareConcurrency ?? null,
-      } : null,
-      viewport: typeof window !== "undefined" ? {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        pixelRatio: window.devicePixelRatio,
-        orientation: window.matchMedia("(orientation: landscape)").matches ? "landscape" : "portrait",
-        pathname: window.location.pathname,
-      } : null,
+      device:
+        typeof navigator !== "undefined"
+          ? {
+              userAgent: navigator.userAgent,
+              language: navigator.language,
+              platform: navigator.platform,
+              online: navigator.onLine,
+              deviceMemoryGB:
+                (navigator as Navigator & { deviceMemory?: number })
+                  .deviceMemory ?? null,
+              hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+            }
+          : null,
+      viewport:
+        typeof window !== "undefined"
+          ? {
+              width: window.innerWidth,
+              height: window.innerHeight,
+              pixelRatio: window.devicePixelRatio,
+              orientation: window.matchMedia("(orientation: landscape)")
+                .matches
+                ? "landscape"
+                : "portrait",
+              pathname: window.location.pathname,
+            }
+          : null,
     };
 
     let nextEntries = [...diagnosticEntries, entry].slice(-80);
+
     try {
-      const existing = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
+      const existing = JSON.parse(
+        localStorage.getItem("helloTigerCrashLogV1") || "[]"
+      );
       const base = Array.isArray(existing) ? existing : [];
       nextEntries = [...base, entry].slice(-80);
-      localStorage.setItem("helloTigerCrashLogV1", JSON.stringify(nextEntries));
+      localStorage.setItem(
+        "helloTigerCrashLogV1",
+        JSON.stringify(nextEntries)
+      );
     } catch {
-      // Diagnostics must never interrupt gameplay if browser storage is unavailable.
+      // Diagnostics must never interrupt gameplay.
     }
+
     setDiagnosticEntries(nextEntries);
     if (critical) setDiagnosticsOpen(true);
   };
@@ -340,94 +354,166 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
-      if (Array.isArray(saved)) setDiagnosticEntries(saved.slice(-80));
+      const saved = JSON.parse(
+        localStorage.getItem("helloTigerCrashLogV1") || "[]"
+      );
+      if (Array.isArray(saved)) {
+        setDiagnosticEntries(saved.slice(-80));
+      }
     } catch {
-      // Ignore damaged or unavailable local diagnostic storage.
+      // Ignore unavailable diagnostic storage.
     }
 
     const handleWindowError = (event: ErrorEvent) => {
-      recordDiagnostic("javascript_error", {
-        message: event.message || "Unknown window error",
-        filename: event.filename,
-        line: event.lineno,
-        column: event.colno,
-        stack: event.error instanceof Error ? event.error.stack : null,
-      }, true);
+      recordDiagnostic(
+        "javascript_error",
+        {
+          message: event.message || "Unknown window error",
+          filename: event.filename,
+          line: event.lineno,
+          column: event.colno,
+          stack:
+            event.error instanceof Error ? event.error.stack : null,
+        },
+        true
+      );
     };
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+
+    const handleUnhandledRejection = (
+      event: PromiseRejectionEvent
+    ) => {
       const reason = event.reason;
-      recordDiagnostic("unhandled_promise_rejection", {
-        message: reason instanceof Error ? reason.message : String(reason),
-        stack: reason instanceof Error ? reason.stack : null,
-      }, true);
+
+      recordDiagnostic(
+        "unhandled_promise_rejection",
+        {
+          message:
+            reason instanceof Error
+              ? reason.message
+              : String(reason),
+          stack: reason instanceof Error ? reason.stack : null,
+        },
+        true
+      );
     };
+
     const handleVisibility = () => {
-      recordDiagnostic(document.visibilityState === "hidden" ? "app_backgrounded" : "app_resumed");
+      recordDiagnostic(
+        document.visibilityState === "hidden"
+          ? "app_backgrounded"
+          : "app_resumed"
+      );
     };
-    const handlePageHide = () => recordDiagnostic("page_hidden_or_unloaded");
+
+    const handlePageHide = () =>
+      recordDiagnostic("page_hidden_or_unloaded");
 
     window.addEventListener("error", handleWindowError);
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener(
+      "unhandledrejection",
+      handleUnhandledRejection
+    );
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
     window.addEventListener("pagehide", handlePageHide);
 
-    recordDiagnostic("diagnostics_started", { version: "1.0" });
+    recordDiagnostic("diagnostics_started", {
+      version: "1.1",
+    });
 
     return () => {
       window.removeEventListener("error", handleWindowError);
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener(
+        "unhandledrejection",
+        handleUnhandledRejection
+      );
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
+      );
       window.removeEventListener("pagehide", handlePageHide);
     };
   }, []);
 
   const exportDiagnosticLog = (copy = false) => {
     let logs = diagnosticEntries;
+
     try {
-      const saved = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
+      const saved = JSON.parse(
+        localStorage.getItem("helloTigerCrashLogV1") || "[]"
+      );
       if (Array.isArray(saved)) logs = saved;
     } catch {
-      // Fall back to the in-memory log.
+      // Fall back to in-memory logs.
     }
-    const report = JSON.stringify({
-      game: "Hello Tiger!",
-      diagnosticVersion: "1.0",
-      exportedAt: new Date().toISOString(),
-      entries: logs,
-    }, null, 2);
+
+    const report = JSON.stringify(
+      {
+        game: "Hello Tiger!",
+        diagnosticVersion: "1.1",
+        exportedAt: new Date().toISOString(),
+        entries: logs,
+      },
+      null,
+      2
+    );
 
     if (copy) {
       if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(report).then(
-          () => setMessage("Crash log copied. Send it to Dad so he can investigate!"),
-          () => setMessage("Couldn't copy automatically. Use Download Log instead.")
+          () =>
+            setMessage(
+              "Crash log copied. Send it to Dad so he can investigate!"
+            ),
+          () =>
+            setMessage(
+              "Couldn't copy automatically. Use Download Log instead."
+            )
         );
       } else {
-        setMessage("Clipboard isn't available here. Use Download Log instead.");
+        setMessage(
+          "Clipboard isn't available here. Use Download Log instead."
+        );
       }
       return;
     }
 
-    const blob = new Blob([report], { type: "application/json" });
+    const blob = new Blob([report], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
+
     link.href = url;
-    link.download = `hello-tiger-crash-log-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.download = `hello-tiger-crash-log-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.json`;
+
     link.click();
-    URL.revokeObjectURL(url);
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   useEffect(() => {
     const syncFullscreenState = () => {
-      setIsFullscreen(document.fullscreenElement === gameRootRef.current);
-      // Make Babylon recalculate the canvas dimensions after entering or leaving
-      // fullscreen, including when the user presses Escape.
+      setIsFullscreen(
+        document.fullscreenElement === gameRootRef.current
+      );
       window.dispatchEvent(new Event("resize"));
     };
 
-    document.addEventListener("fullscreenchange", syncFullscreenState);
-    return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+    document.addEventListener(
+      "fullscreenchange",
+      syncFullscreenState
+    );
+
+    return () =>
+      document.removeEventListener(
+        "fullscreenchange",
+        syncFullscreenState
+      );
   }, []);
 
   const toggleFullscreen = async () => {
@@ -441,8 +527,14 @@ export default function Home() {
         await gameRoot.requestFullscreen();
       }
     } catch (error) {
-      console.error("Unable to toggle fullscreen mode:", error);
-      setMessage("Fullscreen isn't available in this browser window. Try opening the game in a regular browser tab.");
+      console.error(
+        "Unable to toggle fullscreen mode:",
+        error
+      );
+
+      setMessage(
+        "Fullscreen isn't available in this browser window. Try opening the game in a regular browser tab."
+      );
     }
   };
 
@@ -452,24 +544,68 @@ export default function Home() {
 
     const handleContextLost = (event: Event) => {
       event.preventDefault();
-      diagnosticRecorderRef.current?.("webgl_context_lost", {
-        message: "The browser lost the graphics context. This can happen under mobile GPU or memory pressure.",
-      }, true);
+
+      diagnosticRecorderRef.current?.(
+        "webgl_context_lost",
+        {
+          message:
+            "The browser lost the graphics context. This can happen under mobile GPU or memory pressure.",
+        },
+        true
+      );
     };
+
     const handleContextRestored = () => {
-      diagnosticRecorderRef.current?.("webgl_context_restored", {}, false);
+      diagnosticRecorderRef.current?.(
+        "webgl_context_restored",
+        {},
+        false
+      );
     };
-    canvas.addEventListener("webglcontextlost", handleContextLost, false);
-    canvas.addEventListener("webglcontextrestored", handleContextRestored, false);
+
+    canvas.addEventListener(
+      "webglcontextlost",
+      handleContextLost,
+      false
+    );
+
+    canvas.addEventListener(
+      "webglcontextrestored",
+      handleContextRestored,
+      false
+    );
+
     diagnosticRecorderRef.current?.("game_engine_starting");
+
+    // Use lower-cost rendering settings on touch-first devices.
+    const isMobileDevice =
+      window.matchMedia("(pointer: coarse)").matches ||
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     const engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
       stencil: false,
-      antialias: true,
+      antialias: !isMobileDevice,
       powerPreference: "high-performance",
     });
 
+    if (isMobileDevice) {
+      engine.setHardwareScalingLevel(
+        window.devicePixelRatio >= 3 ? 2 : 1.5
+      );
+
+      diagnosticRecorderRef.current?.(
+        "mobile_rendering_profile",
+        {
+          antialias: false,
+          hardwareScalingLevel:
+            window.devicePixelRatio >= 3 ? 2 : 1.5,
+          devicePixelRatio: window.devicePixelRatio,
+        }
+      );
+    }
+
+    // engine initialization
     // Keep the game crisp instead of deliberately rendering at reduced resolution.
     engine.setHardwareScalingLevel(1);
 
