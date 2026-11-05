@@ -110,6 +110,9 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRootRef = useRef<HTMLElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [diagnosticEntries, setDiagnosticEntries] = useState<Array<Record<string, unknown>>>([]);
+  const diagnosticRecorderRef = useRef<((type: string, detail?: Record<string, unknown>, critical?: boolean) => void) | null>(null);
   const houseCatActionRef = useRef<(() => void) | null>(null);
 
   const [catsRescued, setCatsRescued] = useState(0);
@@ -293,6 +296,128 @@ export default function Home() {
     </button>
   );
 
+  const recordDiagnostic = (
+    type: string,
+    detail: Record<string, unknown> = {},
+    critical = false
+  ) => {
+    const entry: Record<string, unknown> = {
+      timestamp: new Date().toISOString(),
+      elapsedMs: typeof performance !== "undefined" ? Math.round(performance.now()) : null,
+      type,
+      detail,
+      device: typeof navigator !== "undefined" ? {
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        online: navigator.onLine,
+        deviceMemoryGB: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
+        hardwareConcurrency: navigator.hardwareConcurrency ?? null,
+      } : null,
+      viewport: typeof window !== "undefined" ? {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        pixelRatio: window.devicePixelRatio,
+        orientation: window.matchMedia("(orientation: landscape)").matches ? "landscape" : "portrait",
+        pathname: window.location.pathname,
+      } : null,
+    };
+
+    let nextEntries = [...diagnosticEntries, entry].slice(-80);
+    try {
+      const existing = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
+      const base = Array.isArray(existing) ? existing : [];
+      nextEntries = [...base, entry].slice(-80);
+      localStorage.setItem("helloTigerCrashLogV1", JSON.stringify(nextEntries));
+    } catch {
+      // Diagnostics must never interrupt gameplay if browser storage is unavailable.
+    }
+    setDiagnosticEntries(nextEntries);
+    if (critical) setDiagnosticsOpen(true);
+  };
+
+  diagnosticRecorderRef.current = recordDiagnostic;
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
+      if (Array.isArray(saved)) setDiagnosticEntries(saved.slice(-80));
+    } catch {
+      // Ignore damaged or unavailable local diagnostic storage.
+    }
+
+    const handleWindowError = (event: ErrorEvent) => {
+      recordDiagnostic("javascript_error", {
+        message: event.message || "Unknown window error",
+        filename: event.filename,
+        line: event.lineno,
+        column: event.colno,
+        stack: event.error instanceof Error ? event.error.stack : null,
+      }, true);
+    };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      recordDiagnostic("unhandled_promise_rejection", {
+        message: reason instanceof Error ? reason.message : String(reason),
+        stack: reason instanceof Error ? reason.stack : null,
+      }, true);
+    };
+    const handleVisibility = () => {
+      recordDiagnostic(document.visibilityState === "hidden" ? "app_backgrounded" : "app_resumed");
+    };
+    const handlePageHide = () => recordDiagnostic("page_hidden_or_unloaded");
+
+    window.addEventListener("error", handleWindowError);
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", handlePageHide);
+
+    recordDiagnostic("diagnostics_started", { version: "1.0" });
+
+    return () => {
+      window.removeEventListener("error", handleWindowError);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
+  const exportDiagnosticLog = (copy = false) => {
+    let logs = diagnosticEntries;
+    try {
+      const saved = JSON.parse(localStorage.getItem("helloTigerCrashLogV1") || "[]");
+      if (Array.isArray(saved)) logs = saved;
+    } catch {
+      // Fall back to the in-memory log.
+    }
+    const report = JSON.stringify({
+      game: "Hello Tiger!",
+      diagnosticVersion: "1.0",
+      exportedAt: new Date().toISOString(),
+      entries: logs,
+    }, null, 2);
+
+    if (copy) {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(report).then(
+          () => setMessage("Crash log copied. Send it to Dad so he can investigate!"),
+          () => setMessage("Couldn't copy automatically. Use Download Log instead.")
+        );
+      } else {
+        setMessage("Clipboard isn't available here. Use Download Log instead.");
+      }
+      return;
+    }
+
+    const blob = new Blob([report], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `hello-tiger-crash-log-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     const syncFullscreenState = () => {
       setIsFullscreen(document.fullscreenElement === gameRootRef.current);
@@ -325,6 +450,19 @@ export default function Home() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      diagnosticRecorderRef.current?.("webgl_context_lost", {
+        message: "The browser lost the graphics context. This can happen under mobile GPU or memory pressure.",
+      }, true);
+    };
+    const handleContextRestored = () => {
+      diagnosticRecorderRef.current?.("webgl_context_restored", {}, false);
+    };
+    canvas.addEventListener("webglcontextlost", handleContextLost, false);
+    canvas.addEventListener("webglcontextrestored", handleContextRestored, false);
+    diagnosticRecorderRef.current?.("game_engine_starting");
+
     const engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
       stencil: false,
@@ -336,6 +474,20 @@ export default function Home() {
     engine.setHardwareScalingLevel(1);
 
     const scene = new Scene(engine);
+    const heartbeatTimer = window.setInterval(() => {
+      const memory = (performance as Performance & {
+        memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number };
+      }).memory;
+      diagnosticRecorderRef.current?.("runtime_heartbeat", {
+        fps: Math.round(engine.getFps()),
+        meshes: scene.meshes.length,
+        activeMeshes: scene.getActiveMeshes().length,
+        renderWidth: engine.getRenderWidth(),
+        renderHeight: engine.getRenderHeight(),
+        jsHeapUsedMB: memory?.usedJSHeapSize ? Math.round(memory.usedJSHeapSize / 1048576) : null,
+        jsHeapLimitMB: memory?.jsHeapSizeLimit ? Math.round(memory.jsHeapSizeLimit / 1048576) : null,
+      });
+    }, 10000);
     scene.clearColor = new Color4(0.55, 0.78, 0.98, 1);
     scene.skipPointerMovePicking = true;
 
@@ -5077,6 +5229,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     };
 
    
+let firstFrameRecorded = false;
 engine.runRenderLoop(() => {
   if (scene.isDisposed) return;
 
@@ -5680,10 +5833,34 @@ engine.runRenderLoop(() => {
         });
       });
 
-      scene.render();
+      try {
+        scene.render();
+        if (!firstFrameRecorded) {
+          firstFrameRecorded = true;
+          diagnosticRecorderRef.current?.("first_frame_rendered", {
+            fps: Math.round(engine.getFps()),
+            meshes: scene.meshes.length,
+            activeMeshes: scene.getActiveMeshes().length,
+          });
+        }
+      } catch (error) {
+        diagnosticRecorderRef.current?.("render_loop_error", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : null,
+        }, true);
+        throw error;
+      }
     });
 
-    const handleResize = () => engine.resize();
+    const handleResize = () => {
+      engine.resize();
+      diagnosticRecorderRef.current?.("canvas_resized", {
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+        renderWidth: engine.getRenderWidth(),
+        renderHeight: engine.getRenderHeight(),
+      });
+    };
     window.addEventListener("resize", handleResize);
 
     return () => {
@@ -5693,7 +5870,10 @@ engine.runRenderLoop(() => {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", clearKeys);
       window.removeEventListener("resize", handleResize);
+      canvas.removeEventListener("webglcontextlost", handleContextLost);
+      canvas.removeEventListener("webglcontextrestored", handleContextRestored);
 
+      window.clearInterval(heartbeatTimer);
       engine.stopRenderLoop();
       shadowGenerator.dispose();
       scene.dispose();
@@ -6546,6 +6726,43 @@ MAIN QUEST
           }
         }
       `}</style>
+
+      <div style={{ position: "fixed", zIndex: 120, top: "max(10px, env(safe-area-inset-top))", left: "50%", transform: "translateX(-50%)", pointerEvents: "auto" }}>
+        <button
+          type="button"
+          onClick={() => setDiagnosticsOpen((open) => !open)}
+          style={{ border: "1px solid rgba(148,163,184,.35)", borderRadius: 999, padding: "7px 11px", background: "rgba(8,18,34,.82)", color: "#e2e8f0", fontSize: 11, fontWeight: 700, boxShadow: "0 4px 16px rgba(0,0,0,.25)", touchAction: "manipulation" }}
+        >
+          🛠️ Crash log {diagnosticEntries.length > 0 ? `(${diagnosticEntries.length})` : ""}
+        </button>
+        {diagnosticsOpen && (
+          <div style={{ width: "min(330px, calc(100vw - 24px))", marginTop: 8, padding: 14, borderRadius: 14, border: "1px solid rgba(148,163,184,.35)", background: "rgba(7,17,31,.96)", color: "#e2e8f0", boxShadow: "0 12px 36px rgba(0,0,0,.45)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 7 }}>
+              <strong style={{ fontSize: 14 }}>Game diagnostics</strong>
+              <button type="button" onClick={() => setDiagnosticsOpen(false)} aria-label="Close diagnostics" style={{ color: "#cbd5e1", background: "transparent", border: 0, fontSize: 20, padding: "0 4px" }}>×</button>
+            </div>
+            <p style={{ fontSize: 11, lineHeight: 1.45, color: "#aebed0", margin: "0 0 10px" }}>
+              If the game freezes or crashes, reopen this panel and send Dad the log. It records browser errors, graphics crashes, device details and recent app activity on this device only.
+            </p>
+            <div style={{ fontSize: 11, color: "#cbd5e1", marginBottom: 10 }}>
+              {diagnosticEntries.length} recent events saved on this device
+            </div>
+            <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+              <button type="button" onClick={() => exportDiagnosticLog(true)} style={{ flex: 1, minWidth: 115, border: 0, borderRadius: 8, padding: "9px 10px", background: "#2563eb", color: "white", fontWeight: 700, fontSize: 11 }}>Copy log</button>
+              <button type="button" onClick={() => exportDiagnosticLog(false)} style={{ flex: 1, minWidth: 115, border: "1px solid rgba(148,163,184,.4)", borderRadius: 8, padding: "9px 10px", background: "rgba(30,41,59,.9)", color: "white", fontWeight: 700, fontSize: 11 }}>Download log</button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                try { localStorage.removeItem("helloTigerCrashLogV1"); } catch { /* storage may be unavailable */ }
+                setDiagnosticEntries([]);
+                recordDiagnostic("diagnostic_log_cleared");
+              }}
+              style={{ marginTop: 9, padding: 4, border: 0, background: "transparent", color: "#94a3b8", fontSize: 10, textDecoration: "underline" }}
+            >Clear saved log</button>
+          </div>
+        )}
+      </div>
 
       <div className="mobile-controller">
         {/* LEFT THUMB — MOVEMENT */}
