@@ -1069,330 +1069,342 @@ ground.receiveShadows = true;
     lake.isPickable = false;
     lake.receiveShadows = false;
 
-    // HELLO TIGER! — EXPLORABLE ENVIRONMENTS OUR MAP
-    // Load and position the mountain, animated ocean, and houses.
-    void (async () => {
-      const environments: {
-        name: string;
-        file: string;
-        x: number;
-        z: number;
-        targetFootprint: number;
-        groundOffset: number;
-        rotationY?: number;
-      }[] = [
-        {
-          name: "ReachableMountainLandscape",
-          file: "landscape_forest__mountains.glb",
-          x: 220,
-          z: -55,
-          targetFootprint: 450,
-          groundOffset: -28.5,
-        },
-        {
-          name: "AnimatedOcean",
-          file: "animated_ocean_scene.glb",
-          x: -380,
-          z: 100,
-          targetFootprint: 280,
-          groundOffset: -134,
-        },
-        {
-          name: "GrandmasHouse",
-          file: "dae_diorama_-_grandmas_house.glb",
-          x: 400,
-          z: -145,
-          targetFootprint: 295,
-          groundOffset: -50,
-        },
-        {
-          name: "GrandmasHouse2",
-          file: "dae_diorama_-_grandmas_house2.glb",
-          x: -230,
-          z: -90,
-          targetFootprint: 242,
-          groundOffset: -25,
-          rotationY: (3 * Math.PI) / 2,
-        },
-      ];
+   // HELLO TIGER! — EXPLORABLE ENVIRONMENTS OUR MAP
+// Load and position the mountain, animated ocean, houses, and aqueduct.
+void (async () => {
+  const environments: {
+    name: string;
+    file: string;
+    x: number;
+    z: number;
+    targetFootprint: number;
+    groundOffset: number;
+    rotationY?: number;
+  }[] = [
+    {
+      name: "ReachableMountainLandscape",
+      file: "landscape_forest__mountains.glb",
+      x: 220,
+      z: -55,
+      targetFootprint: 450,
+      groundOffset: -28.5,
+    },
+    {
+      name: "AnimatedOcean",
+      file: "animated_ocean_scene.glb",
+      x: -380,
+      z: 100,
+      targetFootprint: 280,
+      groundOffset: -134,
+    },
+    {
+      name: "GrandmasHouse",
+      file: "dae_diorama_-_grandmas_house.glb",
+      x: 400,
+      z: -145,
+      targetFootprint: 295,
+      groundOffset: -50,
+    },
+    {
+      name: "GrandmasHouse2",
+      file: "dae_diorama_-_grandmas_house2.glb",
+      x: -340,
+      z: -90,
+      targetFootprint: 242,
+      groundOffset: -25,
+      rotationY: (Math.PI) / 2,
+    },
+    {
+      name: "GrandmasHouseAqueduct",
+      file: "ruined_aqueduct_arches_segment.glb",
+      x: -225,
+      z: -90,
+      targetFootprint: 120,
+      groundOffset: -25,
+      // Rotate 90 degrees so the back runs along the area edge.
+      rotationY: Math.PI / 2,
+    },
+  ];
 
-      for (const environment of environments) {
-        try {
-          const imported = await SceneLoader.ImportMeshAsync(
-            "",
-            "/models/",
-            environment.file,
-            scene
-          );
+  for (const environment of environments) {
+    try {
+      const imported = await SceneLoader.ImportMeshAsync(
+        "",
+        "/models/",
+        environment.file,
+        scene
+      );
 
-          if (scene.isDisposed) {
-            imported.meshes.forEach((mesh) => mesh.dispose());
-            imported.transformNodes.forEach((node) => node.dispose());
-            return;
-          }
-
-          const root =
-            imported.meshes.find((mesh) => mesh.name === "__root__") ??
-            imported.meshes.find((mesh) => mesh.parent === null) ??
-            imported.meshes[0];
-
-          if (!root) {
-            imported.meshes.forEach((mesh) => mesh.dispose());
-            imported.transformNodes.forEach((node) => node.dispose());
-            console.error(`No root mesh found for ${environment.file}`);
-            continue;
-          }
-
-          root.name = environment.name;
-
-          // OCEAN MATERIAL DIAGNOSTICS AND COLOR CORRECTION.
- 
-          // OCEAN MATERIAL DIAGNOSTICS.
-          // Preserve the GLB's original textures, colors, reflections,
-          // and material settings while starting its native animations.
-          if (environment.name === "AnimatedOcean") {
-            console.log("OCEAN ORIGINAL MATERIALS", {
-              meshes: imported.meshes
-                .filter((mesh) => mesh.getTotalVertices() > 0)
-                .map((mesh) => ({
-                  mesh: mesh.name,
-                  material: mesh.material?.name ?? "(none)",
-                  type: mesh.material?.getClassName() ?? "(none)",
-                  textures:
-                    mesh.material?.getActiveTextures().map((texture) => ({
-                      name: texture.name,
-                      level: texture.level,
-                      coordinatesIndex: texture.coordinatesIndex,
-                    })) ?? [],
-                })),
-              animations: imported.animationGroups.map((group) => group.name),
-            });
-
-            imported.animationGroups.forEach((group) => {
-              group.start(true);
-              console.log("OCEAN ANIMATION STARTED", group.name);
-            });
-          }
-
-          // Measure the original model before applying the group rotation.
-          root.computeWorldMatrix(true);
-          let bounds = root.getHierarchyBoundingVectors(true);
-
-          const originalCenter = new Vector3(
-            (bounds.min.x + bounds.max.x) / 2,
-            (bounds.min.y + bounds.max.y) / 2,
-            (bounds.min.z + bounds.max.z) / 2
-          );
-
-          // Create a pivot at the visible model center for rotated assets.
-          let environmentPivot: TransformNode | null = null;
-
-          if (environment.rotationY) {
-            environmentPivot = new TransformNode(
-              `${environment.name}RotationPivot`,
-              scene
-            );
-
-            environmentPivot.position.copyFrom(originalCenter);
-            environmentPivot.rotation.y = environment.rotationY;
-
-            root.setParent(environmentPivot);
-            root.position.subtractInPlace(originalCenter);
-            root.computeWorldMatrix(true);
-            environmentPivot.computeWorldMatrix(true);
-
-            console.log("ENVIRONMENT GROUP ROTATION", {
-              name: environment.name,
-              rotationRadians: environment.rotationY,
-              rotationDegrees:
-                (environment.rotationY * 180) / Math.PI,
-              pivotPosition: environmentPivot.position.asArray(),
-            });
-          }
-
-          const placementRoot: TransformNode | Mesh =
-            environmentPivot ?? root;
-
-          // Log the mountain mesh hierarchy for future diagnostics.
-          if (environment.file === "landscape_forest__mountains.glb") {
-            console.log(
-              "HELLO TIGER! MOUNTAIN — ALL MESHES",
-              imported.meshes.map((mesh, index) => ({
-                index,
-                name: mesh.name,
-                parent: mesh.parent?.name ?? "(no parent)",
-                vertices: mesh.getTotalVertices(),
-                material: mesh.material?.name ?? "(no material)",
-                enabled: mesh.isEnabled(),
-                position: {
-                  x: mesh.position.x,
-                  y: mesh.position.y,
-                  z: mesh.position.z,
-                },
-                scaling: {
-                  x: mesh.scaling.x,
-                  y: mesh.scaling.y,
-                  z: mesh.scaling.z,
-                },
-              }))
-            );
-          } else {
-            console.log(
-              `HELLO TIGER! ${environment.name} — DOME CANDIDATES`,
-              imported.meshes
-                .map((mesh) => ({
-                  name: mesh.name,
-                  parent: mesh.parent?.name ?? "(no parent)",
-                  vertices: mesh.getTotalVertices(),
-                  material: mesh.material?.name ?? "(no material)",
-                }))
-                .filter((mesh) =>
-                  /dome|sphere|sky|horizon|background|environment/i.test(
-                    `${mesh.name} ${mesh.parent} ${mesh.material}`
-                  )
-                )
-            );
-          }
-
-          // Hide the Japanese sphere only if that asset is loaded.
-          if (
-            environment.file === "an_overgrown_japanese-style_location.glb"
-          ) {
-            imported.meshes.forEach((mesh) => {
-              if (
-                mesh.name === "Sphere_Material_0" ||
-                mesh.parent?.name === "Sphere"
-              ) {
-                mesh.setEnabled(false);
-                console.log("JAPANESE SPHERE HIDDEN", mesh.name);
-              }
-            });
-          }
-
-          // Hide the confirmed mountain dome without disposing it.
-          if (environment.file === "landscape_forest__mountains.glb") {
-            imported.meshes.forEach((mesh) => {
-              if (
-                mesh.name === "Sphere_Material.011_0" &&
-                mesh.parent?.name === "Sphere"
-              ) {
-                mesh.setEnabled(false);
-
-                console.log("MOUNTAIN DOME HIDDEN — PRESERVED FOR REUSE", {
-                  name: mesh.name,
-                  parent: mesh.parent?.name ?? null,
-                  material: mesh.material?.name ?? null,
-                  vertices: mesh.getTotalVertices(),
-                });
-              }
-            });
-          }
-
-          // Measure the configured orientation and size.
-          placementRoot.computeWorldMatrix(true);
-          bounds = root.getHierarchyBoundingVectors(true);
-
-          const sizeX = bounds.max.x - bounds.min.x;
-          const sizeZ = bounds.max.z - bounds.min.z;
-          const footprint = Math.max(sizeX, sizeZ);
-
-          if (!Number.isFinite(footprint) || footprint <= 0) {
-            console.error(`Invalid model dimensions: ${environment.file}`);
-            imported.meshes.forEach((mesh) => mesh.dispose());
-            environmentPivot?.dispose();
-            continue;
-          }
-
-          // Scale the entire environment group.
-          const scale = environment.targetFootprint / footprint;
-          placementRoot.scaling.scaleInPlace(scale);
-          placementRoot.computeWorldMatrix(true);
-
-          bounds = root.getHierarchyBoundingVectors(true);
-
-          // Center the environment at its configured X/Z coordinates.
-          placementRoot.position.x +=
-            environment.x - (bounds.min.x + bounds.max.x) / 2;
-
-          placementRoot.position.z +=
-            environment.z - (bounds.min.z + bounds.max.z) / 2;
-
-          // Align the bottom and apply the configured vertical offset.
-          placementRoot.computeWorldMatrix(true);
-          bounds = root.getHierarchyBoundingVectors(true);
-
-          placementRoot.position.y -= bounds.min.y;
-          placementRoot.position.y += environment.groundOffset;
-          placementRoot.computeWorldMatrix(true);
-
-          // Configure environment meshes and shadows.
-          imported.meshes.forEach((mesh) => {
-            if (mesh.getTotalVertices() === 0 || !mesh.isEnabled()) return;
-
-            mesh.isPickable = true;
-            mesh.receiveShadows = true;
-
-            // The animated ocean doesn't need to cast shadows.
-            if (environment.name !== "AnimatedOcean" && mesh !== root) {
-              shadowGenerator.addShadowCaster(mesh, true);
-            }
-          });
-
-          if (environment.name === "GrandmasHouse") {
-            const houseBounds = root.getHierarchyBoundingVectors(true);
-
-            const marker = MeshBuilder.CreateSphere(
-              "GrandmasHouseDebugMarker",
-              { diameter: 8 },
-              scene
-            );
-
-            marker.position.set(
-              (houseBounds.min.x + houseBounds.max.x) / 2,
-              (houseBounds.min.y + houseBounds.max.y) / 2,
-              (houseBounds.min.z + houseBounds.max.z) / 2
-            );
-
-            const markerMaterial = new StandardMaterial(
-              "GrandmasHouseDebugMarkerMaterial",
-              scene
-            );
-            markerMaterial.diffuseColor = new Color3(1, 0, 1);
-            markerMaterial.emissiveColor = new Color3(1, 0, 1);
-            marker.material = markerMaterial;
-
-            console.log("GRANDMA'S HOUSE DEBUG", {
-              rootPosition: root.position.asArray(),
-              boundsMin: houseBounds.min.asArray(),
-              boundsMax: houseBounds.max.asArray(),
-              markerPosition: marker.position.asArray(),
-              meshCount: imported.meshes.length,
-              visibleMeshes: imported.meshes.filter(
-                (mesh) => mesh.isEnabled() && mesh.getTotalVertices() > 0
-              ).length,
-            });
-          }
-
-          console.log("HELLO TIGER! ENVIRONMENT LOADED", {
-            name: environment.name,
-            file: environment.file,
-            position: {
-              x: environment.x,
-              z: environment.z,
-              groundOffset: environment.groundOffset,
-              rotationY: environment.rotationY ?? 0,
-            },
-            scale,
-            footprint: environment.targetFootprint,
-          });
-        } catch (error) {
-          console.error(
-            `Failed to load environment: ${environment.file}`,
-            error
-          );
-        }
+      if (scene.isDisposed) {
+        imported.meshes.forEach((mesh) => mesh.dispose());
+        imported.transformNodes.forEach((node) => node.dispose());
+        return;
       }
-    })();
+
+      const root =
+        imported.meshes.find((mesh) => mesh.name === "__root__") ??
+        imported.meshes.find((mesh) => mesh.parent === null) ??
+        imported.meshes[0];
+
+      if (!root) {
+        imported.meshes.forEach((mesh) => mesh.dispose());
+        imported.transformNodes.forEach((node) => node.dispose());
+        console.error(`No root mesh found for ${environment.file}`);
+        continue;
+      }
+
+      root.name = environment.name;
+
+      // Preserve the ocean's original materials and native animations.
+      if (environment.name === "AnimatedOcean") {
+        console.log("OCEAN ORIGINAL MATERIALS", {
+          meshes: imported.meshes
+            .filter((mesh) => mesh.getTotalVertices() > 0)
+            .map((mesh) => ({
+              mesh: mesh.name,
+              material: mesh.material?.name ?? "(none)",
+              type: mesh.material?.getClassName() ?? "(none)",
+              textures:
+                mesh.material?.getActiveTextures().map((texture) => ({
+                  name: texture.name,
+                  level: texture.level,
+                  coordinatesIndex: texture.coordinatesIndex,
+                })) ?? [],
+            })),
+          animations: imported.animationGroups.map((group) => group.name),
+        });
+
+        imported.animationGroups.forEach((group) => {
+          group.start(true);
+          console.log("OCEAN ANIMATION STARTED", group.name);
+        });
+      }
+
+      // Measure the original model before rotation.
+      root.computeWorldMatrix(true);
+      let bounds = root.getHierarchyBoundingVectors(true);
+
+      const originalCenter = new Vector3(
+        (bounds.min.x + bounds.max.x) / 2,
+        (bounds.min.y + bounds.max.y) / 2,
+        (bounds.min.z + bounds.max.z) / 2
+      );
+
+      // Create a pivot at the visible model center.
+      let environmentPivot: TransformNode | null = null;
+
+      if (environment.rotationY !== undefined) {
+        environmentPivot = new TransformNode(
+          `${environment.name}RotationPivot`,
+          scene
+        );
+
+        environmentPivot.position.copyFrom(originalCenter);
+        root.setParent(environmentPivot);
+        root.position.subtractInPlace(originalCenter);
+
+        // Apply the rotation to the entire imported hierarchy.
+        environmentPivot.rotationQuaternion = null;
+        environmentPivot.rotation.set(0, environment.rotationY, 0);
+
+        environmentPivot.computeWorldMatrix(true);
+        root.computeWorldMatrix(true);
+
+        bounds = root.getHierarchyBoundingVectors(true);
+
+        console.log("ENVIRONMENT ROTATION APPLIED", {
+          name: environment.name,
+          degrees: (environment.rotationY * 180) / Math.PI,
+          pivot: environmentPivot.position.asArray(),
+          rotatedBounds: {
+            min: bounds.min.asArray(),
+            max: bounds.max.asArray(),
+          },
+        });
+      }
+
+      const placementRoot: TransformNode | Mesh =
+        environmentPivot ?? root;
+
+      // Mountain mesh hierarchy diagnostics.
+      if (environment.file === "landscape_forest__mountains.glb") {
+        console.log(
+          "HELLO TIGER! MOUNTAIN — ALL MESHES",
+          imported.meshes.map((mesh, index) => ({
+            index,
+            name: mesh.name,
+            parent: mesh.parent?.name ?? "(no parent)",
+            vertices: mesh.getTotalVertices(),
+            material: mesh.material?.name ?? "(no material)",
+            enabled: mesh.isEnabled(),
+            position: {
+              x: mesh.position.x,
+              y: mesh.position.y,
+              z: mesh.position.z,
+            },
+            scaling: {
+              x: mesh.scaling.x,
+              y: mesh.scaling.y,
+              z: mesh.scaling.z,
+            },
+          }))
+        );
+      } else {
+        console.log(
+          `HELLO TIGER! ${environment.name} — DOME CANDIDATES`,
+          imported.meshes
+            .map((mesh) => ({
+              name: mesh.name,
+              parent: mesh.parent?.name ?? "(no parent)",
+              vertices: mesh.getTotalVertices(),
+              material: mesh.material?.name ?? "(no material)",
+            }))
+            .filter((mesh) =>
+              /dome|sphere|sky|horizon|background|environment/i.test(
+                `${mesh.name} ${mesh.parent} ${mesh.material}`
+              )
+            )
+        );
+      }
+
+      // Hide the Japanese sphere only if that asset is loaded.
+      if (
+        environment.file === "an_overgrown_japanese-style_location.glb"
+      ) {
+        imported.meshes.forEach((mesh) => {
+          if (
+            mesh.name === "Sphere_Material_0" ||
+            mesh.parent?.name === "Sphere"
+          ) {
+            mesh.setEnabled(false);
+            console.log("JAPANESE SPHERE HIDDEN", mesh.name);
+          }
+        });
+      }
+
+      // Hide the confirmed mountain dome without disposing it.
+      if (environment.file === "landscape_forest__mountains.glb") {
+        imported.meshes.forEach((mesh) => {
+          if (
+            mesh.name === "Sphere_Material.011_0" &&
+            mesh.parent?.name === "Sphere"
+          ) {
+            mesh.setEnabled(false);
+
+            console.log("MOUNTAIN DOME HIDDEN — PRESERVED FOR REUSE", {
+              name: mesh.name,
+              parent: mesh.parent?.name ?? null,
+              material: mesh.material?.name ?? null,
+              vertices: mesh.getTotalVertices(),
+            });
+          }
+        });
+      }
+
+      // Measure the final rotated orientation and size.
+      placementRoot.computeWorldMatrix(true);
+      bounds = root.getHierarchyBoundingVectors(true);
+
+      const sizeX = bounds.max.x - bounds.min.x;
+      const sizeZ = bounds.max.z - bounds.min.z;
+      const footprint = Math.max(sizeX, sizeZ);
+
+      if (!Number.isFinite(footprint) || footprint <= 0) {
+        console.error(`Invalid model dimensions: ${environment.file}`);
+        imported.meshes.forEach((mesh) => mesh.dispose());
+        environmentPivot?.dispose();
+        continue;
+      }
+
+      // Scale the entire environment group.
+      const scale = environment.targetFootprint / footprint;
+      placementRoot.scaling.scaleInPlace(scale);
+      placementRoot.computeWorldMatrix(true);
+
+      bounds = root.getHierarchyBoundingVectors(true);
+
+      // Center the environment at its configured X/Z coordinates.
+      placementRoot.position.x +=
+        environment.x - (bounds.min.x + bounds.max.x) / 2;
+
+      placementRoot.position.z +=
+        environment.z - (bounds.min.z + bounds.max.z) / 2;
+
+      // Align the bottom and apply the configured vertical offset.
+      placementRoot.computeWorldMatrix(true);
+      bounds = root.getHierarchyBoundingVectors(true);
+
+      placementRoot.position.y -= bounds.min.y;
+      placementRoot.position.y += environment.groundOffset;
+      placementRoot.computeWorldMatrix(true);
+
+      // Configure environment meshes and shadows.
+      imported.meshes.forEach((mesh) => {
+        if (mesh.getTotalVertices() === 0 || !mesh.isEnabled()) return;
+
+        mesh.isPickable = true;
+        mesh.receiveShadows = true;
+
+        if (environment.name !== "AnimatedOcean" && mesh !== root) {
+          shadowGenerator.addShadowCaster(mesh, true);
+        }
+      });
+
+      if (environment.name === "GrandmasHouse") {
+        const houseBounds = root.getHierarchyBoundingVectors(true);
+
+        const marker = MeshBuilder.CreateSphere(
+          "GrandmasHouseDebugMarker",
+          { diameter: 8 },
+          scene
+        );
+
+        marker.position.set(
+          (houseBounds.min.x + houseBounds.max.x) / 2,
+          (houseBounds.min.y + houseBounds.max.y) / 2,
+          (houseBounds.min.z + houseBounds.max.z) / 2
+        );
+
+        const markerMaterial = new StandardMaterial(
+          "GrandmasHouseDebugMarkerMaterial",
+          scene
+        );
+        markerMaterial.diffuseColor = new Color3(1, 0, 1);
+        markerMaterial.emissiveColor = new Color3(1, 0, 1);
+        marker.material = markerMaterial;
+
+        console.log("GRANDMA'S HOUSE DEBUG", {
+          rootPosition: root.position.asArray(),
+          boundsMin: houseBounds.min.asArray(),
+          boundsMax: houseBounds.max.asArray(),
+          markerPosition: marker.position.asArray(),
+          meshCount: imported.meshes.length,
+          visibleMeshes: imported.meshes.filter(
+            (mesh) => mesh.isEnabled() && mesh.getTotalVertices() > 0
+          ).length,
+        });
+      }
+
+      console.log("HELLO TIGER! ENVIRONMENT LOADED", {
+        name: environment.name,
+        file: environment.file,
+        position: {
+          x: environment.x,
+          z: environment.z,
+          groundOffset: environment.groundOffset,
+          rotationY: environment.rotationY ?? 0,
+        },
+        scale,
+        footprint: environment.targetFootprint,
+      });
+    } catch (error) {
+      console.error(
+        `Failed to load environment: ${environment.file}`,
+        error
+      );
+    }
+  }
+})();
 
     // MEDIEVAL COUNTRYSIDE HOUSE
     void (async () => {
@@ -5443,16 +5455,22 @@ engine.runRenderLoop(() => {
       }
     }
 
-    // Keep player movement aligned with the expanded world boundaries.
-    tiger.position.x = Math.max(
-      WORLD_MIN_X,
-      Math.min(WORLD_MAX_X, tiger.position.x)
-    );
+   // TEMPORARY TIGER EXPLORATION BOUNDARIES — AQUEDUCT TEST
+// Extend west and toward the mountain without resizing the map.
+const TIGER_MIN_X = -290;
+const TIGER_MAX_X = WORLD_MAX_X;
+const TIGER_MIN_Z = -120;
+const TIGER_MAX_Z = WORLD_MAX_Z;
 
-    tiger.position.z = Math.max(
-      WORLD_MIN_Z,
-      Math.min(WORLD_MAX_Z, tiger.position.z)
-    );
+tiger.position.x = Math.max(
+  TIGER_MIN_X,
+  Math.min(TIGER_MAX_X, tiger.position.x)
+);
+
+tiger.position.z = Math.max(
+  TIGER_MIN_Z,
+  Math.min(TIGER_MAX_Z, tiger.position.z)
+);
   }
 
       // Fluid, visible kid locomotion. Blend movement in/out so limbs ease into

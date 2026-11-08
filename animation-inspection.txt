@@ -1,0 +1,692 @@
+
+=================================================================
+GLB: aaron-tiger_blender_rigged.glb
+Skeleton: (unnamed)
+Joint count: 27
+Joints: hips, spine0, chest, neck, head, jaw, earL, earR, shoulderL, upperArmL, forearmL, handL, fingerL, shoulderR, upperArmR, forearmR, handR, fingerR, thighL, shinL, footL, toeL, thighR, shinR, footR, toeR, motion_root
+Animation clips: 0
+
+=================================================================
+GLB: mixamo-idle.glb
+Skeleton: Armature
+Joint count: 65
+Joints: mixamorig:Hips, mixamorig:LeftUpLeg, mixamorig:LeftLeg, mixamorig:LeftFoot, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:RightUpLeg, mixamorig:RightLeg, mixamorig:RightFoot, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2, mixamorig:LeftShoulder, mixamorig:LeftArm, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:Neck, mixamorig:Head, mixamorig:HeadTop_End, mixamorig:RightShoulder, mixamorig:RightArm, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4
+Animation clips: 1
+  - Armature|mixamo.com|Layer0
+
+=================================================================
+FBX: Hip Hop Dancing.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-518.0
+
+=================================================================
+FBX: Jump.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-79.0
+
+=================================================================
+FBX: Pain Gesture.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-54.0
+
+=================================================================
+FBX: Running.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-22.0
+
+=================================================================
+FBX: Spell Cast.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-35.0
+
+=================================================================
+FBX: Standard Walk.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-36.0
+
+=================================================================
+FBX: Standing React Death Forward.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-111.0
+
+=================================================================
+FBX: Standing Sprint Forward.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-18.0
+
+=================================================================
+FBX: Start Walking.fbx
+Armature: Armature
+Bone count: 65
+Matching Aaron bone names: 0/27 (0.0%)
+Bones: mixamorig:Head, mixamorig:HeadTop_End, mixamorig:Hips, mixamorig:LeftArm, mixamorig:LeftFoot, mixamorig:LeftForeArm, mixamorig:LeftHand, mixamorig:LeftHandIndex1, mixamorig:LeftHandIndex2, mixamorig:LeftHandIndex3, mixamorig:LeftHandIndex4, mixamorig:LeftHandMiddle1, mixamorig:LeftHandMiddle2, mixamorig:LeftHandMiddle3, mixamorig:LeftHandMiddle4, mixamorig:LeftHandPinky1, mixamorig:LeftHandPinky2, mixamorig:LeftHandPinky3, mixamorig:LeftHandPinky4, mixamorig:LeftHandRing1, mixamorig:LeftHandRing2, mixamorig:LeftHandRing3, mixamorig:LeftHandRing4, mixamorig:LeftHandThumb1, mixamorig:LeftHandThumb2, mixamorig:LeftHandThumb3, mixamorig:LeftHandThumb4, mixamorig:LeftLeg, mixamorig:LeftShoulder, mixamorig:LeftToeBase, mixamorig:LeftToe_End, mixamorig:LeftUpLeg, mixamorig:Neck, mixamorig:RightArm, mixamorig:RightFoot, mixamorig:RightForeArm, mixamorig:RightHand, mixamorig:RightHandIndex1, mixamorig:RightHandIndex2, mixamorig:RightHandIndex3, mixamorig:RightHandIndex4, mixamorig:RightHandMiddle1, mixamorig:RightHandMiddle2, mixamorig:RightHandMiddle3, mixamorig:RightHandMiddle4, mixamorig:RightHandPinky1, mixamorig:RightHandPinky2, mixamorig:RightHandPinky3, mixamorig:RightHandPinky4, mixamorig:RightHandRing1, mixamorig:RightHandRing2, mixamorig:RightHandRing3, mixamorig:RightHandRing4, mixamorig:RightHandThumb1, mixamorig:RightHandThumb2, mixamorig:RightHandThumb3, mixamorig:RightHandThumb4, mixamorig:RightLeg, mixamorig:RightShoulder, mixamorig:RightToeBase, mixamorig:RightToe_End, mixamorig:RightUpLeg, mixamorig:Spine, mixamorig:Spine1, mixamorig:Spine2
+Hierarchy:
+  (root) -> mixamorig:Hips
+  mixamorig:Hips -> mixamorig:Spine
+  mixamorig:Spine -> mixamorig:Spine1
+  mixamorig:Spine1 -> mixamorig:Spine2
+  mixamorig:Spine2 -> mixamorig:Neck
+  mixamorig:Neck -> mixamorig:Head
+  mixamorig:Head -> mixamorig:HeadTop_End
+  mixamorig:Spine2 -> mixamorig:RightShoulder
+  mixamorig:RightShoulder -> mixamorig:RightArm
+  mixamorig:RightArm -> mixamorig:RightForeArm
+  mixamorig:RightForeArm -> mixamorig:RightHand
+  mixamorig:RightHand -> mixamorig:RightHandThumb1
+  mixamorig:RightHandThumb1 -> mixamorig:RightHandThumb2
+  mixamorig:RightHandThumb2 -> mixamorig:RightHandThumb3
+  mixamorig:RightHandThumb3 -> mixamorig:RightHandThumb4
+  mixamorig:RightHand -> mixamorig:RightHandIndex1
+  mixamorig:RightHandIndex1 -> mixamorig:RightHandIndex2
+  mixamorig:RightHandIndex2 -> mixamorig:RightHandIndex3
+  mixamorig:RightHandIndex3 -> mixamorig:RightHandIndex4
+  mixamorig:RightHand -> mixamorig:RightHandMiddle1
+  mixamorig:RightHandMiddle1 -> mixamorig:RightHandMiddle2
+  mixamorig:RightHandMiddle2 -> mixamorig:RightHandMiddle3
+  mixamorig:RightHandMiddle3 -> mixamorig:RightHandMiddle4
+  mixamorig:RightHand -> mixamorig:RightHandRing1
+  mixamorig:RightHandRing1 -> mixamorig:RightHandRing2
+  mixamorig:RightHandRing2 -> mixamorig:RightHandRing3
+  mixamorig:RightHandRing3 -> mixamorig:RightHandRing4
+  mixamorig:RightHand -> mixamorig:RightHandPinky1
+  mixamorig:RightHandPinky1 -> mixamorig:RightHandPinky2
+  mixamorig:RightHandPinky2 -> mixamorig:RightHandPinky3
+  mixamorig:RightHandPinky3 -> mixamorig:RightHandPinky4
+  mixamorig:Spine2 -> mixamorig:LeftShoulder
+  mixamorig:LeftShoulder -> mixamorig:LeftArm
+  mixamorig:LeftArm -> mixamorig:LeftForeArm
+  mixamorig:LeftForeArm -> mixamorig:LeftHand
+  mixamorig:LeftHand -> mixamorig:LeftHandThumb1
+  mixamorig:LeftHandThumb1 -> mixamorig:LeftHandThumb2
+  mixamorig:LeftHandThumb2 -> mixamorig:LeftHandThumb3
+  mixamorig:LeftHandThumb3 -> mixamorig:LeftHandThumb4
+  mixamorig:LeftHand -> mixamorig:LeftHandIndex1
+  mixamorig:LeftHandIndex1 -> mixamorig:LeftHandIndex2
+  mixamorig:LeftHandIndex2 -> mixamorig:LeftHandIndex3
+  mixamorig:LeftHandIndex3 -> mixamorig:LeftHandIndex4
+  mixamorig:LeftHand -> mixamorig:LeftHandMiddle1
+  mixamorig:LeftHandMiddle1 -> mixamorig:LeftHandMiddle2
+  mixamorig:LeftHandMiddle2 -> mixamorig:LeftHandMiddle3
+  mixamorig:LeftHandMiddle3 -> mixamorig:LeftHandMiddle4
+  mixamorig:LeftHand -> mixamorig:LeftHandRing1
+  mixamorig:LeftHandRing1 -> mixamorig:LeftHandRing2
+  mixamorig:LeftHandRing2 -> mixamorig:LeftHandRing3
+  mixamorig:LeftHandRing3 -> mixamorig:LeftHandRing4
+  mixamorig:LeftHand -> mixamorig:LeftHandPinky1
+  mixamorig:LeftHandPinky1 -> mixamorig:LeftHandPinky2
+  mixamorig:LeftHandPinky2 -> mixamorig:LeftHandPinky3
+  mixamorig:LeftHandPinky3 -> mixamorig:LeftHandPinky4
+  mixamorig:Hips -> mixamorig:RightUpLeg
+  mixamorig:RightUpLeg -> mixamorig:RightLeg
+  mixamorig:RightLeg -> mixamorig:RightFoot
+  mixamorig:RightFoot -> mixamorig:RightToeBase
+  mixamorig:RightToeBase -> mixamorig:RightToe_End
+  mixamorig:Hips -> mixamorig:LeftUpLeg
+  mixamorig:LeftUpLeg -> mixamorig:LeftLeg
+  mixamorig:LeftLeg -> mixamorig:LeftFoot
+  mixamorig:LeftFoot -> mixamorig:LeftToeBase
+  mixamorig:LeftToeBase -> mixamorig:LeftToe_End
+Actions found: 1
+  Action: Armature|mixamo.com|Layer0 | Frames: 1.0-89.0
+
+INSPECTION COMPLETE
