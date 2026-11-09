@@ -110,6 +110,7 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRootRef = useRef<HTMLElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isGameLoading, setIsGameLoading] = useState(true);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const [diagnosticEntries, setDiagnosticEntries] = useState<Array<Record<string, unknown>>>([]);
   const diagnosticRecorderRef = useRef<((type: string, detail?: Record<string, unknown>, critical?: boolean) => void) | null>(null);
@@ -5393,6 +5394,19 @@ tigerModelAnimations.forEach((group) => group.stop());
     };
 
    
+// Keep the splash screen visible until Babylon has finished its queued
+// model, texture, and scene readiness work. This avoids exposing a half-built
+// world while the imported environments are still arriving.
+scene.executeWhenReady(() => {
+  if (scene.isDisposed) return;
+  setIsGameLoading(false);
+  diagnosticRecorderRef.current?.("scene_ready", {
+    meshes: scene.meshes.length,
+    materials: scene.materials.length,
+    textures: scene.textures.length,
+  });
+});
+
 let firstFrameRecorded = false;
 engine.runRenderLoop(() => {
   if (scene.isDisposed) return;
@@ -6082,6 +6096,110 @@ tiger.position.z = Math.max(
     }}
   />
 
+  {isGameLoading && (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="Loading Hello Tiger"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 980,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        background:
+          "radial-gradient(ellipse at 50% 38%, rgba(25,63,91,.96), rgba(5,13,27,.985) 72%)",
+        color: "#f8fafc",
+        textAlign: "center",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+      }}
+    >
+      <div style={{ width: "min(360px, 100%)" }}>
+        <div
+          style={{
+            width: 68,
+            height: 68,
+            margin: "0 auto 22px",
+            display: "grid",
+            placeItems: "center",
+            borderRadius: 22,
+            border: "1px solid rgba(103,232,249,.35)",
+            background: "linear-gradient(145deg,rgba(34,211,238,.16),rgba(99,102,241,.18))",
+            boxShadow: "0 0 45px rgba(34,211,238,.14)",
+            fontSize: 34,
+          }}
+        >
+          🐯
+        </div>
+        <div
+          style={{
+            fontSize: 25,
+            lineHeight: 1.15,
+            fontWeight: 950,
+            letterSpacing: "1.8px",
+            textShadow: "0 3px 24px rgba(34,211,238,.2)",
+          }}
+        >
+          HELLO TIGER!
+        </div>
+        <div
+          style={{
+            marginTop: 10,
+            color: "#b8c8dc",
+            fontSize: 13,
+            lineHeight: 1.6,
+          }}
+        >
+          Getting the adventure ready...
+        </div>
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            margin: "25px auto 17px",
+            borderRadius: "50%",
+            border: "3px solid rgba(148,163,184,.22)",
+            borderTopColor: "#67e8f9",
+            animation: "helloTigerSpin .9s linear infinite",
+          }}
+        />
+        <div
+          style={{
+            height: 5,
+            width: "100%",
+            overflow: "hidden",
+            borderRadius: 99,
+            background: "rgba(148,163,184,.16)",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: "38%",
+              borderRadius: 99,
+              background: "linear-gradient(90deg,#22d3ee,#818cf8)",
+              animation: "helloTigerLoad 1.6s ease-in-out infinite",
+            }}
+          />
+        </div>
+        <div
+          style={{
+            marginTop: 12,
+            color: "#8296ad",
+            fontSize: 10,
+            fontWeight: 800,
+            letterSpacing: "1.5px",
+          }}
+        >
+          LOADING WORLD • MODELS • ANIMATIONS
+        </div>
+      </div>
+    </div>
+  )}
+
   {/* FULLSCREEN */}
   <button
     onClick={toggleFullscreen}
@@ -6605,25 +6723,27 @@ MAIN QUEST
         gap: 7,
       }}
     >
-      {[
-        ["W A S D", "Move", null],
-        ["ARROWS", "Move", null],
-        ["SHIFT", "Sprint", "Shift"],
-        ["MOUSE", "Look around", null],
-        ["WHEEL", "Zoom camera", null],
-        ["SPACE", "Jump / stomp", " "],
-        ["F", "Fire magic bolt", "f"],
-        ["C", "Craft charm", "c"],
-        ["E", "Interact / rescue / collect", "e"],
-        ["H", "House rescued cat", "h"],
-        ["B", "Barn build mode", "b"],
-        ["T", "Road build mode", "t"],
-        ["Y", "Water build mode", "y"],
-        ["Q", "Rotate build preview left", "q"],
-        ["R", "Rotate build preview right", "r"],
-        ["ENTER", "Build / place", "Enter"],
-        ["ESC", "Cancel / exit build mode", "Escape"],
-      ].map(([key, description, action]) => (
+      {(
+        [
+          ["W A S D", "Move", null],
+          ["ARROWS", "Move", null],
+          ["SHIFT", "Sprint", "Shift"],
+          ["MOUSE", "Look around", null],
+          ["WHEEL", "Zoom camera", null],
+          ["SPACE", "Jump / stomp", " "],
+          ["F", "Fire magic bolt", "f"],
+          ["C", "Craft charm", "c"],
+          ["E", "Interact / rescue / collect", "e"],
+          ["H", "House rescued cat", "h"],
+          ["B", "Barn build mode", "b"],
+          ["T", "Road build mode", "t"],
+          ["Y", "Water build mode", "y"],
+          ["Q", "Rotate build preview left", "q"],
+          ["R", "Rotate build preview right", "r"],
+          ["ENTER", "Build / place", "Enter"],
+          ["ESC", "Cancel / exit build mode", "Escape"],
+        ] as [string, string, string | null][]
+      ).map(([key, description, action]) => (
         <button
           key={key}
           type="button"
@@ -6729,6 +6849,16 @@ MAIN QUEST
   </aside>
         {/* MOBILE GAME CONTROLLER */}
       <style>{`
+        @keyframes helloTigerSpin {
+          to { transform: rotate(360deg); }
+        }
+
+        @keyframes helloTigerLoad {
+          0% { transform: translateX(-115%); }
+          50% { transform: translateX(110%); }
+          100% { transform: translateX(290%); }
+        }
+
         .mobile-controller {
           display: none;
         }
