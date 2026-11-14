@@ -77,6 +77,20 @@ type Slime = {
   stompCooldown: number;
 };
 
+type Stag = {
+  x: number;
+  z: number;
+  homeX: number;
+  homeZ: number;
+  wanderTargetX: number;
+  wanderTargetZ: number;
+  nextWanderAt: number;
+  health: number;
+  alive: boolean;
+  body: TransformNode;
+  hitFlash: number;
+};
+
 type Projectile = {
   mesh: Mesh;
   x: number;
@@ -4035,6 +4049,33 @@ tigerModelAnimations.forEach((group) => group.stop());
     // is attached as a visual child so movement, targeting, and hit logic stay unchanged.
     const slimes: Slime[] = [];
 
+    // Four giant Stag Guardians, separate from the slime quest system.
+    const stags: Stag[] = [];
+
+    const createStag = (x: number, z: number, index: number) => {
+      const body = new TransformNode(`Stag${index}Root`, scene);
+      body.position.set(x, 0, z);
+
+      stags.push({
+        x,
+        z,
+        homeX: x,
+        homeZ: z,
+        wanderTargetX: x,
+        wanderTargetZ: z,
+        nextWanderAt: 0,
+        health: 5,
+        alive: true,
+        body,
+        hitFlash: 0,
+      });
+    };
+
+    createStag(-145, -130, 0);
+    createStag(185, -130, 1);
+    createStag(-145, 130, 2);
+    createStag(185, 130, 3);
+
     const createSlime = (x: number, z: number, index: number) => {
       const body = new TransformNode(`Slime${index}Root`, scene);
       body.position.set(x, 0.48, z);
@@ -4176,6 +4217,86 @@ tigerModelAnimations.forEach((group) => group.stop());
         console.error("Failed to load dendro_slime.glb; using procedural slime fallback.", error);
         diagnosticRecorderRef.current?.("slime_model_load_failed", {
           file: "dendro_slime.glb",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
+
+    // Load the deer once and clone its complete hierarchy for all four bosses.
+    void (async () => {
+      try {
+        const importedStag = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "male_deer_animal_3d_model_free.glb",
+          scene
+        );
+
+        if (scene.isDisposed) return;
+
+        const sourceRoot =
+          importedStag.meshes.find((mesh) => mesh.name === "__root__") ??
+          importedStag.meshes.find((mesh) => !mesh.parent) ??
+          importedStag.meshes[0];
+
+        if (!sourceRoot) {
+          throw new Error("Deer GLB loaded without a root mesh.");
+        }
+
+        sourceRoot.computeWorldMatrix(true);
+        const sourceBounds = sourceRoot.getHierarchyBoundingVectors(true);
+        const sourceSize = sourceBounds.max.subtract(sourceBounds.min);
+        const largestDimension = Math.max(
+          sourceSize.x,
+          sourceSize.y,
+          sourceSize.z
+        );
+        const modelScale =
+          largestDimension > 0 ? 6 / largestDimension : 1;
+
+        stags.forEach((stag, index) => {
+          const visual = sourceRoot.clone(
+            `StagGuardian${index}`,
+            stag.body,
+            false
+          );
+
+          if (!visual) {
+            throw new Error(`Could not clone Stag Guardian ${index}.`);
+          }
+
+          visual.position.set(0, -sourceBounds.min.y * modelScale, 0);
+          visual.rotation.set(0, 0, 0);
+          visual.scaling.setAll(modelScale);
+          visual.setEnabled(true);
+
+          const visualMeshes = [
+            ...(visual instanceof Mesh ? [visual] : []),
+            ...visual.getChildMeshes(false),
+          ];
+
+          visualMeshes.forEach((mesh) => {
+            mesh.isPickable = false;
+            mesh.setEnabled(true);
+            shadowGenerator.addShadowCaster(mesh);
+          });
+        });
+
+        // Hide the imported source only after all four clones exist.
+        sourceRoot.setEnabled(false);
+
+        diagnosticRecorderRef.current?.("stag_model_loaded", {
+          file: "male_deer_animal_3d_model_free.glb",
+          instances: stags.length,
+          meshes: importedStag.meshes.length,
+        });
+      } catch (error) {
+        console.error(
+          "Failed to load Stag Guardian model.",
+          error
+        );
+        diagnosticRecorderRef.current?.("stag_model_load_failed", {
+          file: "male_deer_animal_3d_model_free.glb",
           message: error instanceof Error ? error.message : String(error),
         });
       }
@@ -6089,6 +6210,59 @@ tiger.position.z = Math.max(
 
           setHealth(healthCount);
         }
+      }
+      // Stag Guardian AI: wander around home territory, or chase nearby Tiger.
+      for (const stag of stags) {
+        if (!stag.alive) continue;
+
+        const tigerDx = tiger.position.x - stag.x;
+        const tigerDz = tiger.position.z - stag.z;
+        const tigerDistance = Math.hypot(tigerDx, tigerDz);
+
+        let moveX = 0;
+        let moveZ = 0;
+        let moveSpeed = 0;
+
+        if (tigerDistance < 30 && tigerDistance > 2.2) {
+          // The Stag notices Tiger and charges.
+          moveX = tigerDx / tigerDistance;
+          moveZ = tigerDz / tigerDistance;
+          moveSpeed = 0.045 * dt;
+        } else {
+          // Stay within the Stag's own corner territory.
+          const targetDx = stag.wanderTargetX - stag.x;
+          const targetDz = stag.wanderTargetZ - stag.z;
+          const targetDistance = Math.hypot(targetDx, targetDz);
+
+          if (now >= stag.nextWanderAt) {
+            if (targetDistance < 1.5) {
+              // Pause, then choose another point within 12 units of home.
+              stag.nextWanderAt =
+                now + 1200 + Math.random() * 2800;
+
+              const angle = Math.random() * Math.PI * 2;
+              const radius = 3 + Math.random() * 9;
+
+              stag.wanderTargetX =
+                stag.homeX + Math.cos(angle) * radius;
+              stag.wanderTargetZ =
+                stag.homeZ + Math.sin(angle) * radius;
+            } else {
+              moveX = targetDx / targetDistance;
+              moveZ = targetDz / targetDistance;
+              moveSpeed = 0.018 * dt;
+            }
+          }
+        }
+
+        if (moveSpeed > 0) {
+          stag.x += moveX * moveSpeed;
+          stag.z += moveZ * moveSpeed;
+          stag.body.rotation.y = Math.atan2(moveX, moveZ);
+        }
+
+        stag.body.position.x = stag.x;
+        stag.body.position.z = stag.z;
       }
       // Check the win condition.
       if (
