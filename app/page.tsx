@@ -4069,6 +4069,15 @@ tigerModelAnimations.forEach((group) => group.stop());
     createSlime(7, -2, 1);
     createSlime(10, 7, 2);
     createSlime(-12, 9, 3);
+    // Eight new Shadow Slimes guarding the mountain-house cave area
+    createSlime(94, -34, 4);
+    createSlime(110, -28, 5);
+    createSlime(116, -12, 6);
+    createSlime(110, 4, 7);
+    createSlime(94, 10, 8);
+    createSlime(78, 4, 9);
+    createSlime(72, -12, 10);
+    createSlime(78, -28, 11);
 
     // Load the dendro slime once, then clone its complete hierarchy for each
     // enemy. The existing Slime objects remain the source of truth for gameplay.
