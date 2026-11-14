@@ -595,37 +595,45 @@ export default function Home() {
 
     diagnosticRecorderRef.current?.("game_engine_starting");
 
-    // Use lower-cost rendering settings on touch-first devices.
+    // Use a lower-cost rendering profile on constrained devices.
+    const userAgent = navigator.userAgent;
     const isMobileDevice =
       window.matchMedia("(pointer: coarse)").matches ||
-      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      /Android|iPhone|iPad|iPod/i.test(userAgent);
+    const isSafariBrowser =
+      /Safari/i.test(userAgent) &&
+      !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(userAgent);
+    const isPlayStationBrowser = /PlayStation|PlayStation 5|PS5/i.test(userAgent);
+    const isConstrainedRenderingDevice =
+      isMobileDevice || isSafariBrowser || isPlayStationBrowser;
+
+    const hardwareScalingLevel =
+      window.devicePixelRatio >= 3 ? 2 : 1.5;
 
     const engine = new Engine(canvas, true, {
       preserveDrawingBuffer: false,
       stencil: false,
-      antialias: !isMobileDevice,
+      antialias: !isConstrainedRenderingDevice,
       powerPreference: "high-performance",
     });
 
-    if (isMobileDevice) {
-      engine.setHardwareScalingLevel(
-        window.devicePixelRatio >= 3 ? 2 : 1.5
-      );
+    if (isConstrainedRenderingDevice) {
+      engine.setHardwareScalingLevel(hardwareScalingLevel);
 
       diagnosticRecorderRef.current?.(
-        "mobile_rendering_profile",
+        "constrained_rendering_profile",
         {
           antialias: false,
-          hardwareScalingLevel:
-            window.devicePixelRatio >= 3 ? 2 : 1.5,
+          hardwareScalingLevel,
           devicePixelRatio: window.devicePixelRatio,
+          isMobileDevice,
+          isSafariBrowser,
+          isPlayStationBrowser,
         }
       );
     }
 
-    // engine initialization
-    // Keep the game crisp instead of deliberately rendering at reduced resolution.
-    engine.setHardwareScalingLevel(1);
+    // Desktop devices retain Babylon.js default full-resolution rendering.
 
     const scene = new Scene(engine);
     const heartbeatTimer = window.setInterval(() => {
@@ -1016,10 +1024,15 @@ export default function Home() {
     sunLight.position = new Vector3(10, 18, -10);
     sunLight.intensity = 1.0;
 
-// Higher-resolution filtered shadows make characters and scenery feel grounded.
-const shadowGenerator = new ShadowGenerator(2048, sunLight);
+// Adapt shadow quality to the device rendering profile.
+const shadowGenerator = new ShadowGenerator(
+  isConstrainedRenderingDevice ? 1024 : 2048,
+  sunLight
+);
 shadowGenerator.usePercentageCloserFiltering = true;
-shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+shadowGenerator.filteringQuality = isConstrainedRenderingDevice
+  ? ShadowGenerator.QUALITY_MEDIUM
+  : ShadowGenerator.QUALITY_HIGH;
 shadowGenerator.setDarkness(0.22);
 
 // Expanded terrain gives us room to expose more existing pickups
