@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import "@babylonjs/loaders/glTF";
@@ -70,7 +70,8 @@ type Slime = {
   z: number;
   health: number;
   alive: boolean;
-  body: Mesh;
+  body: TransformNode;
+  fallbackBody: Mesh;
   eyes: Mesh[];
   hitFlash: number;
   stompCooldown: number;
@@ -256,7 +257,7 @@ export default function Home() {
     held = false
   ) => (
     <button
-      key={label}
+      key={`${label}-${key}`}
       type="button"
       onPointerDown={(event) => {
         event.preventDefault();
@@ -4017,23 +4018,28 @@ tigerModelAnimations.forEach((group) => group.stop());
     interactionRing.isPickable = false;
     interactionRing.setEnabled(false);
 
-    // Slimes.
+    // Slimes. Keep the existing gameplay objects and combat values; the GLB
+    // is attached as a visual child so movement, targeting, and hit logic stay unchanged.
     const slimes: Slime[] = [];
 
     const createSlime = (x: number, z: number, index: number) => {
-      const body = MeshBuilder.CreateSphere(
-        `Slime${index}`,
+      const body = new TransformNode(`Slime${index}Root`, scene);
+      body.position.set(x, 0.48, z);
+      body.scaling.set(1, 0.8, 1);
+
+      // Procedural fallback remains available until the GLB has loaded.
+      const fallbackBody = MeshBuilder.CreateSphere(
+        `Slime${index}Fallback`,
         { diameter: 1.2, segments: 12 },
         scene
       );
-      body.position.set(x, 0.48, z);
-      body.scaling.y = 0.8;
-      body.material = slimeMat;
-      body.isPickable = false;
-      shadowGenerator.addShadowCaster(body);
+      fallbackBody.parent = body;
+      fallbackBody.position.set(0, 0, 0);
+      fallbackBody.material = slimeMat;
+      fallbackBody.isPickable = false;
+      shadowGenerator.addShadowCaster(fallbackBody);
 
       const eyes: Mesh[] = [];
-
       for (const offset of [-0.2, 0.2]) {
         const eye = MeshBuilder.CreateSphere(
           `Slime${index}Eye${offset}`,
@@ -4052,6 +4058,7 @@ tigerModelAnimations.forEach((group) => group.stop());
         health: 2,
         alive: true,
         body,
+        fallbackBody,
         eyes,
         hitFlash: 0,
         stompCooldown: 0,
@@ -4062,6 +4069,95 @@ tigerModelAnimations.forEach((group) => group.stop());
     createSlime(7, -2, 1);
     createSlime(10, 7, 2);
     createSlime(-12, 9, 3);
+
+    // Load the dendro slime once, then clone its complete hierarchy for each
+    // enemy. The existing Slime objects remain the source of truth for gameplay.
+    void (async () => {
+      try {
+        const importedSlime = await SceneLoader.ImportMeshAsync(
+          "",
+          "/models/",
+          "dendro_slime.glb",
+          scene
+        );
+
+        if (scene.isDisposed) return;
+
+        const sourceRoot =
+          importedSlime.meshes.find((mesh) => mesh.name === "__root__") ??
+          importedSlime.meshes.find((mesh) => !mesh.parent) ??
+          importedSlime.meshes[0];
+
+        if (!sourceRoot) {
+          throw new Error("dendro_slime.glb loaded without a root mesh.");
+        }
+
+        sourceRoot.computeWorldMatrix(true);
+        const sourceBounds = sourceRoot.getHierarchyBoundingVectors(true);
+        const sourceSize = sourceBounds.max.subtract(sourceBounds.min);
+        const largestDimension = Math.max(
+          sourceSize.x,
+          sourceSize.y,
+          sourceSize.z
+        );
+        const modelScale =
+          largestDimension > 0 ? 1.2 / largestDimension : 1;
+        const modelCenterY =
+          (sourceBounds.min.y + sourceBounds.max.y) * 0.5;
+
+        // Clone while the imported source hierarchy is still enabled.
+        // Babylon copies enabled-state during cloning, so disabling the source
+        // first can produce invisible instances even when the clone root is
+        // subsequently enabled.
+
+        slimes.forEach((slime, index) => {
+          const visual = sourceRoot.clone(
+            `DendroSlime${index}`,
+            slime.body,
+            false
+          );
+
+          if (!visual) {
+            throw new Error(`Could not clone dendro slime ${index}.`);
+          }
+
+          visual.position.set(0, -modelCenterY * modelScale, 0);
+          visual.rotation.set(0, 0, 0);
+          visual.scaling.setAll(modelScale);
+          visual.setEnabled(true);
+
+          const visualMeshes = [
+            ...(visual instanceof Mesh ? [visual] : []),
+            ...visual.getChildMeshes(false),
+          ];
+
+          visualMeshes.forEach((mesh) => {
+            mesh.isPickable = false;
+            mesh.setEnabled(true);
+            shadowGenerator.addShadowCaster(mesh);
+          });
+
+          slime.fallbackBody.setEnabled(false);
+          slime.eyes.forEach((eye) => eye.setEnabled(false));
+        });
+
+        // Hide the original imported copy only after all four visible clones
+        // have been created and attached to their gameplay roots.
+        sourceRoot.setEnabled(false);
+
+        diagnosticRecorderRef.current?.("slime_model_loaded", {
+          file: "dendro_slime.glb",
+          instances: slimes.length,
+          meshes: importedSlime.meshes.length,
+        });
+      } catch (error) {
+        console.error("Failed to load dendro_slime.glb; using procedural slime fallback.", error);
+        diagnosticRecorderRef.current?.("slime_model_load_failed", {
+          file: "dendro_slime.glb",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    })();
 
     // Cyan ring identifies the slime that soft-lock aiming will favor.
     const slimeTargetRingMat = new StandardMaterial(
@@ -4745,7 +4841,7 @@ tigerModelAnimations.forEach((group) => group.stop());
     catsHousedCount += 1;
     setCatsHoused(catsHousedCount);
     setMessage(
-      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! 🐾`
+      `${nextCat.name} is now visible in Barn ${barnIndex + 1}! ??`
     );
   };
 
@@ -5677,7 +5773,7 @@ tiger.position.z = Math.max(
             healthCount = Math.min(13, healthCount + 1);
             setHealth(healthCount);
             setMessage(
-              `Bonus heart collected! ❤️ Tiger now has ${healthCount}/13 health!`
+              `Bonus heart collected! ?? Tiger now has ${healthCount}/13 health!`
             );
           } else {
             setMessage(
@@ -6342,7 +6438,7 @@ tiger.position.z = Math.max(
           }}
         >
           <span>HEALTH</span>
-          <span style={{ color: "#fb7185" }}>♥</span>
+          <span style={{ color: "#fb7185" }}>?</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {health}
@@ -6386,7 +6482,7 @@ tiger.position.z = Math.max(
           }}
         >
           <span>MANA</span>
-          <span style={{ color: "#a78bfa" }}>✦</span>
+          <span style={{ color: "#a78bfa" }}>?</span>
         </div>
         <div style={{ marginTop: 7, fontSize: 22, fontWeight: 900 }}>
           {mana}
@@ -6639,7 +6735,7 @@ MAIN QUEST
           cursor: "pointer",
         }}
       >
-        ↕ Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
+        ? Vertical movement: {invertedMovement ? "REVERSED" : "NORMAL"}
       </button>
     </div>
 
@@ -7088,8 +7184,8 @@ MAIN QUEST
           {mobileActionButton("BARN", "b")}
           {mobileActionButton("ROAD", "t")}
           {mobileActionButton("WATER", "y")}
-          {mobileActionButton("ROTATE ↶", "q")}
-          {mobileActionButton("ROTATE ↷", "r")}
+          {mobileActionButton("ROTATE ?", "q")}
+          {mobileActionButton("ROTATE ?", "r")}
           {mobileActionButton("PLACE", "Enter")}
           {mobileActionButton("CANCEL", "Escape")}
         </div>
@@ -7097,3 +7193,4 @@ MAIN QUEST
 </main>
   );
 }
+
