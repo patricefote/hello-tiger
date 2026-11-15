@@ -1127,6 +1127,14 @@ void (async () => {
       groundOffset: -134,
     },
     {
+      name: "AnimatedOceanExtension",
+      file: "animated_ocean_scene.glb",
+      x: -300,
+      z: 5,
+      targetFootprint: 280,
+      groundOffset: -134,
+    },
+    {
       name: "GrandmasHouse",
       file: "dae_diorama_-_grandmas_house.glb",
       x: 400,
@@ -1183,6 +1191,13 @@ void (async () => {
       }
 
       root.name = environment.name;
+
+      if (environment.name === "AnimatedOceanExtension") {
+        imported.animationGroups.forEach((group) => {
+          group.start(true);
+          console.log("OCEAN EXTENSION ANIMATION STARTED", group.name);
+        });
+      }
 
       // Preserve the ocean's original materials and native animations.
       if (environment.name === "AnimatedOcean") {
@@ -1365,6 +1380,20 @@ void (async () => {
       placementRoot.position.y += environment.groundOffset;
       placementRoot.computeWorldMatrix(true);
 
+      // Hide only the ship on the duplicate ocean. Preserve its animated water.
+      if (environment.name === "AnimatedOceanExtension") {
+        const shipRoot =
+          imported.transformNodes.find((node) => node.name === "Plane.001") ??
+          imported.meshes.find((mesh) => mesh.name === "Plane.001");
+
+        if (shipRoot) {
+          shipRoot.setEnabled(false);
+          console.log("OCEAN EXTENSION SHIP HIDDEN", shipRoot.name);
+        } else {
+          console.warn("OCEAN EXTENSION SHIP PARENT NOT FOUND");
+        }
+      }
+
       // Configure environment meshes and shadows.
       imported.meshes.forEach((mesh) => {
         if (mesh.getTotalVertices() === 0 || !mesh.isEnabled()) return;
@@ -1372,7 +1401,7 @@ void (async () => {
         mesh.isPickable = true;
         mesh.receiveShadows = true;
 
-        if (environment.name !== "AnimatedOcean" && mesh !== root) {
+        if (!environment.name.startsWith("AnimatedOcean") && mesh !== root) {
           shadowGenerator.addShadowCaster(mesh, true);
         }
       });
