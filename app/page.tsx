@@ -1191,14 +1191,12 @@ void (async () => {
             .filter((mesh) => mesh.getTotalVertices() > 0)
             .map((mesh) => ({
               mesh: mesh.name,
+              parent: mesh.parent?.name ?? "(none)",
+              grandparent: mesh.parent?.parent?.name ?? "(none)",
               material: mesh.material?.name ?? "(none)",
-              type: mesh.material?.getClassName() ?? "(none)",
-              textures:
-                mesh.material?.getActiveTextures().map((texture) => ({
-                  name: texture.name,
-                  level: texture.level,
-                  coordinatesIndex: texture.coordinatesIndex,
-                })) ?? [],
+              vertices: mesh.getTotalVertices(),
+              position: mesh.position.asArray(),
+              scaling: mesh.scaling.asArray(),
             })),
           animations: imported.animationGroups.map((group) => group.name),
         });
